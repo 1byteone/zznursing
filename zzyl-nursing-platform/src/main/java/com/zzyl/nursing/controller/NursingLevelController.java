@@ -41,6 +41,14 @@ public class NursingLevelController extends BaseController
     @Autowired
     private INursingLevelService nursingLevelService;
 
+    @ApiOperation("获取所有护理等级")
+    @GetMapping("/all")
+    public R<List<NursingLevel>> listAll(){
+        List<NursingLevel> list=nursingLevelService.listAll();
+        return R.ok(list);
+    }
+
+
     /**
      * 查询护理等级列表
      */

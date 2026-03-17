@@ -6,6 +6,7 @@ import com.zzyl.common.core.domain.AjaxResult;
 import com.zzyl.common.core.domain.R;
 import com.zzyl.common.enums.BusinessType;
 import com.zzyl.nursing.domain.Floor;
+import com.zzyl.nursing.vo.TreeVo;
 import com.zzyl.nursing.service.IFloorService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -29,6 +30,16 @@ public class FloorController extends BaseController
 {
     @Autowired
     private IFloorService floorService;
+
+    /**
+     * 按照状态查询楼层房间床位-树形结构
+     */
+    @GetMapping("/getRoomAndBedByBedStatus/{status}")
+    @ApiOperation("按照状态查询楼层房间床位-树形结构")
+    public R<List<TreeVo>> getRoomAndBedByBedStatus(@ApiParam(value = "床位状态(未入住0, 已入住1)", required = true) @PathVariable("status") Integer status) {
+        List<TreeVo> list = floorService.getRoomAndBedByBedStatus(status);
+        return R.ok(list);
+    }
 
     /**
      * 查询楼层列表
