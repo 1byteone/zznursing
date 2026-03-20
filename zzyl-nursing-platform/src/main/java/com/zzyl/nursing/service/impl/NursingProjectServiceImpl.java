@@ -2,9 +2,13 @@ package com.zzyl.nursing.service.impl;
 
 import java.util.Arrays;
 import java.util.List;
+
+import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
+import com.zzyl.common.constant.CacheConstants;
 import com.zzyl.common.utils.DateUtils;
 import com.zzyl.nursing.vo.NursingProjectVo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import com.zzyl.nursing.mapper.NursingProjectMapper;
 import com.zzyl.nursing.domain.NursingProject;
@@ -22,6 +26,10 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
 {
     @Autowired
     private NursingProjectMapper nursingProjectMapper;
+
+    @Autowired
+    private RedisTemplate<Object, Object> redisTemplate;
+
 
     /**
      * 查询护理项目
@@ -56,7 +64,13 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
     @Override
     public int insertNursingProject(NursingProject nursingProject)
     {
-        return save(nursingProject) ? 1 : 0;
+        Boolean flag = save(nursingProject);
+        deleteCache();
+        return flag ? 1 : 0;
+    }
+
+    private void deleteCache() {
+        redisTemplate.delete(CacheConstants.NURSING_PROJECT_ALL_KEY);
     }
 
     /**
@@ -68,7 +82,9 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
     @Override
     public int updateNursingProject(NursingProject nursingProject)
     {
-        return updateById(nursingProject) ? 1 : 0;
+        Boolean flag = updateById(nursingProject);
+        deleteCache();
+        return flag ? 1 : 0;
     }
 
     /**
@@ -80,7 +96,9 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
     @Override
     public int deleteNursingProjectByIds(Long[] ids)
     {
-        return removeByIds(Arrays.asList(ids)) ? 1 : 0;
+        Boolean flag = removeByIds(Arrays.asList(ids));
+        deleteCache();
+        return flag ? 1 : 0;
     }
 
     /**
@@ -92,7 +110,9 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
     @Override
     public int deleteNursingProjectById(Long id)
     {
-        return removeById(id) ? 1 : 0;
+        Boolean flag = removeById(id);
+        deleteCache();
+        return flag ? 1 : 0;
     }
 
     /**
@@ -102,6 +122,12 @@ public class NursingProjectServiceImpl extends ServiceImpl<NursingProjectMapper,
      */
     @Override
     public List<NursingProjectVo> getAll() {
-        return nursingProjectMapper.getAll();
+        List<NursingProjectVo> nursingProjects = (List<NursingProjectVo>)redisTemplate.opsForValue().get(CacheConstants.NURSING_PROJECT_ALL_KEY);
+        if(!ObjectUtils.isEmpty(nursingProjects)){
+            return nursingProjects;
+        }
+        nursingProjects = nursingProjectMapper.getAll();
+        redisTemplate.opsForValue().set(CacheConstants.NURSING_PROJECT_ALL_KEY, nursingProjects);
+        return nursingProjects;
     }
 }
