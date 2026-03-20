@@ -13,6 +13,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface IContractService extends IService<Contract>
 {
     /**
+     * 更新合同状态
+     */
+    void updateContractStatus();
+
+    /**
      * 查询合同
      * 
      * @param id 合同主键
