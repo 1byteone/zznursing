@@ -36,6 +36,10 @@ logging:
   level:
     com.zzyl: debug
     org.springframework: warn
+    # 降低 Tomcat 临时文件清理失败的日志级别，避免 WARN 刷屏
+    org.springframework.web.multipart.support.StandardServletMultipartResolver: error
+    org.apache.catalina.connector.Request: error
+    org.apache.tomcat.util.http.fileupload.disk.DiskFileItem: error
 
 # 用户配置
 user:
@@ -140,3 +144,10 @@ aliyun:
 
 dept:
   nursingId: 201
+
+# 百度千帆大模型配置
+baidu:
+  qianfan:
+    apiKey: bce-v3/ALTAK-e4khnEVx1fiW9FApX4PN3/b974bc00317dceef49c2cb814d66b5952e3c6b6f
+    baseUrl: https://qianfan.baidubce.com/v2/
+    model: ernie-5.0

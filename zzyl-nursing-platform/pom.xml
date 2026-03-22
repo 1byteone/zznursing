@@ -20,8 +20,15 @@
     <dependencies>
         <dependency>
             <groupId>com.zzyl</groupId>
+            <artifactId>zzyl-oss</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.zzyl</groupId>
             <artifactId>zzyl-common</artifactId>
         </dependency>
+
+
     </dependencies>
 
 </project>

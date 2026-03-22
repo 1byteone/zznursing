@@ -90,4 +90,11 @@
     <logger name="sys-user" level="info">
         <appender-ref ref="sys-user"/>
     </logger>
-</configuration> 
+
+<!--    &lt;!&ndash; 降低 PDFBox 字体扫描的日志级别 &ndash;&gt;-->
+<!--    <logger name="org.apache.pdfbox.pdmodel.font.FileSystemFontProvider" level="ERROR"/>-->
+
+<!--    &lt;!&ndash; 或者针对整个 PDFBox 字体模块 &ndash;&gt;-->
+<!--    <logger name="org.apache.pdfbox.fontbox" level="ERROR"/>-->
+
+</configuration>
