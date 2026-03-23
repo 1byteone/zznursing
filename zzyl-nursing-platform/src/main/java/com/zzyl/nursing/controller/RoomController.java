@@ -32,6 +32,13 @@ public class RoomController extends BaseController
     @Autowired
     private IRoomService roomService;
 
+    @GetMapping("/one/{id}")
+    @ApiOperation("按照房间id查询楼层、房间、价格")
+    public R<RoomVo> getRoomById(@ApiParam(value = "房间ID", required = true) @PathVariable("id") Long id){
+        RoomVo roomVo = roomService.getRoomById(id);
+        return R.ok(roomVo);
+    }
+
     @GetMapping("/getRoomsWithNurByFloorId/{floorId}")
     @ApiOperation("获取所有房间（负责老人）")
     public R<List<RoomVo>> getRoomsWithNurByFloorId(@PathVariable Long floorId) {

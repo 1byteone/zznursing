@@ -2,6 +2,7 @@ package com.zzyl.nursing.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzyl.nursing.domain.Floor;
+import com.zzyl.nursing.vo.TreeVo;
 import com.zzyl.nursing.mapper.FloorMapper;
 import com.zzyl.nursing.service.IFloorService;
 import com.zzyl.nursing.vo.FloorVo;
@@ -23,6 +24,17 @@ public class FloorServiceImpl extends ServiceImpl<FloorMapper, Floor> implements
 {
     @Autowired
     private FloorMapper floorMapper;
+
+    /**
+     * 根据状态获取房间和床位信息
+     *
+     * @param status 状态
+     * @return 结果
+     */
+    @Override
+    public List<TreeVo> getRoomAndBedByBedStatus(Integer status) {
+        return floorMapper.getRoomAndBedByBedStatus(status);
+    }
 
     /**
      * 查询楼层
