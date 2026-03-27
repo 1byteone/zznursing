@@ -56,4 +56,10 @@ public class CacheConstants
      * 护理计划缓存key
      */
     public static final String  NURSING_PLAN_ALL_KEY = "nursingPlan:all";
+
+    /**
+     * iot产品列表缓存key
+     */
+    public static final String IOT_ALL_PRODUCT_LIST= "iot:all_product_list";
+
 }

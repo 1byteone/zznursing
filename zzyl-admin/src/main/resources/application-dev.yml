@@ -214,3 +214,16 @@ baidu:
 wechat:
   appId: wx8359fa91908675d8
   appSecret: ede7b63201bf2986b43dfd7103dd5d56
+
+huaweicloud:
+  ak: HPUACHEBEX6LKUT9YFVG
+  sk: nNoSC2Hq44aM0VStEYbjWiAgg7q2T8sDCueOpeHE
+  #如果是上海一，请填写"cn-east-3"；如果是北京四，请填写"cn-north-4";
+  regionId: cn-east-3
+  endpoint: 2ad0f09f33.st1.iotda-app.cn-north-4.myhuaweicloud.com
+  projectId: ddbdfc514d38476b9fb15787c49f97c5
+  #amqp相关配置 下一章课程接收设备数据使用
+  host: 2ad0f09f33.st1.iotda-app.cn-north-4.myhuaweicloud.com
+  accessKey: 9TwHXyNU
+  accessCode: nTDjOqKdH14qOZiIpxpEqA1vEJk3sEUw
+  queueName: DefaultQueue   #默认无需改动
