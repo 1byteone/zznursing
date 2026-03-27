@@ -4,7 +4,9 @@ import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 
 import com.zzyl.common.core.domain.R;
+import com.zzyl.nursing.domain.Reservation;
 import com.zzyl.nursing.dto.UserLoginRequestDto;
+import com.zzyl.nursing.service.IReservationService;
 import com.zzyl.nursing.vo.LoginVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -42,10 +44,25 @@ public class FamilyMemberController extends BaseController
     @Autowired
     private IFamilyMemberService familyMemberService;
 
+    @Autowired
+    private IReservationService reservationService;
+
     @PostMapping("/login")
     @ApiOperation("小程序登录")
    public AjaxResult login(@RequestBody UserLoginRequestDto userLoginRequestDto){
        LoginVo loginVo =familyMemberService.login(userLoginRequestDto);
        return success(loginVo);
    }
+
+    /**
+     * 查询预约信息列表
+     */
+    @ApiOperation("查询预约信息列表")
+    @GetMapping("/my")
+    public TableDataInfo<List<Reservation>> list(@ApiParam("查询条件对象") Reservation reservation)
+    {
+        startPage();
+        List<Reservation> list = reservationService.selectReservationList(reservation);
+        return getDataTable(list);
+    }
 }
