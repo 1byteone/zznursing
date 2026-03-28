@@ -89,9 +89,9 @@ spring:
       # 最小连接池数量
       minIdle: 10
       # 最大连接池数量
-      maxActive: 20
+      maxActive: 60   # 提升最大连接数
       # 配置获取连接等待超时的时间
-      maxWait: 60000
+      maxWait: 120000   # 延长等待时间至2分钟
       # 配置连接超时时间
       connectTimeout: 30000
       # 配置网络超时时间
@@ -105,7 +105,7 @@ spring:
       # 配置检测连接是否有效
       validationQuery: SELECT 1 FROM DUAL
       testWhileIdle: true
-      testOnBorrow: false
+      testOnBorrow: true  # 借出连接时校验有效性
       testOnReturn: false
       webStatFilter:
         enabled: true
@@ -225,5 +225,5 @@ huaweicloud:
   #amqp相关配置 下一章课程接收设备数据使用
   host: 2ad0f09f33.st1.iotda-app.cn-north-4.myhuaweicloud.com
   accessKey: 9TwHXyNU
-  accessCode: nTDjOqKdH14qOZiIpxpEqA1vEJk3sEUw
+  accessCode: Hrkz1haVDvo1icaROm6rxXSZvmLlSwiq
   queueName: DefaultQueue   #默认无需改动
