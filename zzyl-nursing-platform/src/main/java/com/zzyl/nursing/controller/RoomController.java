@@ -112,4 +112,9 @@ public class RoomController extends BaseController
         return toAjax(roomService.deleteRoomByIds(ids));
     }
 
+    @GetMapping("/getRoomsWithDeviceByFloorId/{floorId}")
+    @ApiOperation("获取所有房间（智能床位）")
+    public R<List<RoomVo>> getRoomsWithDeviceByFloorId(@PathVariable(name = "floorId") Long floorId) {
+        return R.ok(roomService.getRoomsWithDeviceByFloorId(floorId));
+    }
 }

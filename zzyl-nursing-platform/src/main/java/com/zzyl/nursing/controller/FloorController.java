@@ -6,6 +6,7 @@ import com.zzyl.common.core.domain.AjaxResult;
 import com.zzyl.common.core.domain.R;
 import com.zzyl.common.enums.BusinessType;
 import com.zzyl.nursing.domain.Floor;
+import com.zzyl.nursing.vo.FloorVo;
 import com.zzyl.nursing.vo.TreeVo;
 import com.zzyl.nursing.service.IFloorService;
 import io.swagger.annotations.Api;
@@ -106,4 +107,12 @@ public class FloorController extends BaseController
         List<Floor> list = floorService.selectAllByNur();
         return R.ok(list);
     }
+
+
+    @GetMapping("/getAllFloorsWithDevice")
+    @ApiOperation("查询所有楼层（智能设备）")
+    public R<List<FloorVo>> getAllFloorsWithDevice() {
+        return R.ok(floorService.getAllFloorsWithDevice());
+    }
+
 }

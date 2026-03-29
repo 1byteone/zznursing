@@ -2,6 +2,7 @@ package com.zzyl.nursing.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzyl.nursing.domain.Floor;
+import com.zzyl.nursing.vo.FloorVo;
 import com.zzyl.nursing.vo.TreeVo;
 import com.zzyl.nursing.mapper.FloorMapper;
 import com.zzyl.nursing.service.IFloorService;
@@ -102,4 +103,12 @@ public class FloorServiceImpl extends ServiceImpl<FloorMapper, Floor> implements
         return floorMapper.selectAllByNur();
     }
 
+    /**
+     * 查询智能楼层
+     * @return
+     */
+    @Override
+    public List<FloorVo> getAllFloorsWithDevice() {
+        return floorMapper.getAllFloorsWithDevice();
+    }
 }
