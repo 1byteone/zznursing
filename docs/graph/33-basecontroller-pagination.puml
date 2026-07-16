@@ -1,0 +1,77 @@
+@startuml
+title 智颐养老系统 - 分页查询流程(BaseController+PageHelper)
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "Controller\n(extends BaseController)" as ctrl
+participant "BaseController" as base
+participant "PageHelper" as pageHelper
+participant "Service" as svc
+participant "Mapper" as mapper
+participant "MySQL" as db
+
+== 1. 开始分页查询 ==
+ctrl -> base : startPage()
+base -> base : TableSupport.buildPageRequest()
+note right
+  从HttpServletRequest
+  读取参数:
+  pageNum  页码(默认1)
+  pageSize 每页条数(默认10)
+  orderByColumn 排序列
+  isAsc    升/降序
+  reasonable 是否合理化
+end note
+
+base -> pageHelper : PageHelper.startPage()
+pageHelper -> pageHelper : PageThreadLocal.set(page)
+
+== 2. 设置排序 ==
+ctrl -> base : startOrderBy()
+base -> base : SqlUtil.escapeOrderBySql()
+note right
+  防SQL注入:
+  仅允许字母/数字/
+  下划线/空格
+end note
+base -> pageHelper : PageHelper.orderBy(sql)
+
+== 3. 执行查询 ==
+ctrl -> svc : selectList(query)
+svc -> mapper : selectList(query)
+
+mapper -> db : SELECT ... LIMIT ?, ?
+note right
+  PageHelper自动拦截
+  第一个MyBatis查询
+  改写SQL添加
+  LIMIT + COUNT
+  两条语句执行
+end note
+
+db --> mapper : 分页数据 + 总条数
+mapper --> svc : List<Entity>
+svc --> ctrl : List<Entity>
+
+== 4. 封装结果 ==
+ctrl -> base : getDataTable(list)
+base -> base : new PageInfo(list)
+note right
+  从PageInfo获取:
+  total 总记录数
+  pageNum 当前页码
+  封装到TableDataInfo
+  {code, rows, total, msg}
+end note
+
+base --> ctrl : TableDataInfo
+ctrl --> client : 返回JSON
+
+== 5. 清理 ==
+base -> pageHelper : clearPage()
+
+@enduml

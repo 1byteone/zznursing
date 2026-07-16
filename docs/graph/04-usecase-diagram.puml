@@ -1,0 +1,85 @@
+@startuml
+title 智颐养老系统 - 系统用例图
+
+skinparam usecase {
+  BackgroundColor #F0F8FF
+  BorderColor #2E4D7B
+  FontSize 12
+}
+
+left to right direction
+
+actor "系统管理员" as admin #FFD700
+actor "护理人员" as nurse #87CEEB
+actor "老人家属" as family #98FB98
+actor "系统" as system #DDA0DD
+
+rectangle "用户管理" {
+  usecase (UC1) as "用户CRUD\n创建/编辑/删除/查询"
+  usecase (UC2) as "角色权限管理\n角色分配/数据权限"
+  usecase (UC3) as "部门岗位管理\n组织架构维护"
+}
+
+rectangle "系统管理" {
+  usecase (UC4) as "菜单管理\n配置动态菜单树"
+  usecase (UC5) as "字典管理\n维护数据字典"
+  usecase (UC6) as "参数配置\n系统参数设置"
+  usecase (UC7) as "通知公告\n发布管理"
+}
+
+rectangle "监控管理" {
+  usecase (UC8) as "操作日志\n审计操作记录"
+  usecase (UC9) as "登录日志\n登录安全审计"
+  usecase (UC10) as "在线用户\n监控活跃会话"
+  usecase (UC11) as "缓存监控\nRedis运行状态"
+  usecase (UC12) as "服务监控\nCPU/内存/磁盘"
+}
+
+rectangle "护理业务管理" {
+  usecase (UC13) as "楼层/房间/床位管理\n物理位置层次维护"
+  usecase (UC14) as "老人信息管理\n档案/状态/家属"
+  usecase (UC15) as "入住申请管理\n全过程入住流程"
+  usecase (UC16) as "护理方案管理\n方案-等级-项目体系"
+  usecase (UC17) as "护工分配\n老人-护工关联"
+  usecase (UC18) as "合同管理\n全生命周期管理"
+  usecase (UC19) as "设备管理\nIoT设备注册监控"
+  usecase (UC20) as "健康评估\nAI辅助体检报告分析"
+}
+
+rectangle "微信小程序" {
+  usecase (UC21) as "微信登录\n一键授权登录"
+  usecase (UC22) as "预约参观/探访\n在线提交预约"
+  usecase (UC23) as "家属信息管理\n维护紧急联系人"
+}
+
+admin --> UC1
+admin --> UC2
+admin --> UC3
+admin --> UC4
+admin --> UC5
+admin --> UC6
+admin --> UC7
+admin --> UC8
+admin --> UC9
+admin --> UC10
+admin --> UC11
+admin --> UC12
+
+nurse --> UC13
+nurse --> UC14
+nurse --> UC15
+nurse --> UC16
+nurse --> UC17
+nurse --> UC18
+nurse --> UC19
+nurse --> UC20
+
+family --> UC21
+family --> UC22
+family --> UC23
+
+system ..> UC19 : <&clock> 定时同步设备数据
+system ..> UC20 : <&star> AI解析体检报告
+system ..> UC18 : <&clock> 定时更新合同状态
+
+@enduml

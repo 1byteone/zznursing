@@ -1,0 +1,93 @@
+@startuml
+title 智颐养老系统 - Maven模块层级与依赖关系
+
+skinparam component {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+  RoundCorner 8
+}
+
+skinparam arrow {
+  Color #4682B4
+  FontSize 10
+}
+
+package "<&layers> 应用入口" as app {
+  component "zzyl-admin\nWeb服务入口\nspring-boot-maven-plugin" as admin #FFE4E1
+}
+
+package "<&layers> 核心业务" as biz {
+  component "zzyl-nursing-platform\n护理业务核心\n(16Controller 19Mapper)" as nursing #FFFACD
+  component "zzyl-quartz\n定时任务调度\nQuartz动态调度" as quartz #E0FFFF
+  component "zzyl-generator\n代码生成器\nVelocity模板引擎" as generator #F5FFFA
+}
+
+package "<&layers> 中间层" as mid {
+  component "zzyl-framework\n框架核心\nSecurity+JWT+AOP+Redis" as framework #FFEFD5
+  component "zzyl-oss\n对象存储\n阿里云OSS SDK" as oss #FFE4E1
+  component "zzyl-system\n系统模块\nRBAC权限管理" as system #FFF0F5
+}
+
+package "<&layers> 基础层" as base {
+  component "zzyl-common\n通用工具\n(零内部依赖)" as common #F0F8FF
+}
+
+package "<&external> 外部依赖" as ext {
+  component "Spring Boot\n2.5.15" as sb
+  component "Spring Security\n5.7.12" as ss
+  component "MyBatis-Plus\n3.5.2" as mp
+  component "Redis\n(Spring Data)" as redis
+  component "MySQL\n(Druid 1.2.23)" as mysql
+  component "Huawei IoTDA\n3.1.76" as iot
+  component "Baidu Qianfan\nOpenAI-兼容" as ai
+  component "Aliyun OSS\n3.17.4" as aliyun
+  component "Quartz\n(动态调度)" as quartzLib
+  component "PageHelper\n1.4.7" as ph
+  component "Knife4j\n3.0.3" as knife4j
+}
+
+admin --> framework : 依赖
+admin --> nursing
+admin --> quartz
+admin --> generator
+admin --> oss
+admin --> system : 传递依赖
+
+nursing --> framework : 依赖
+nursing --> oss : 依赖
+nursing --> common : 依赖
+framework --> system : 依赖
+system --> common : 依赖
+oss --> common : 依赖
+quartz --> common : 依赖
+generator --> common : 依赖
+
+framework --> sb : 使用
+framework --> ss : 使用
+framework --> mp : 使用
+framework --> redis : 使用
+framework --> iot : 集成
+nursing --> ai : 调用
+nursing --> ph : 分页
+oss --> aliyun : SDK
+quartz --> quartzLib : 调度
+admin --> knife4j : API文档
+
+note right of admin
+  finalName: zzyl-admin
+  Repackage goal
+  fork=true
+  可打JAR/WAR包
+end note
+
+note right of common
+  核心工具:
+  BaseEntity / AjaxResult
+  RedisCache / ExcelUtil
+  SecurityUtils / IpUtils
+  JWT处理 / JSON工具
+  Kotlin stdlib
+end note
+
+@enduml

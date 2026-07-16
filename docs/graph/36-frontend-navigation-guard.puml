@@ -1,0 +1,74 @@
+@startuml
+title 智颐养老系统 - 前端路由导航守卫流程
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #4B0082
+  FontSize 11
+}
+
+start
+:router.beforeEach触发;
+:NProgress.start();
+
+:获取token和roles;
+
+if (token存在?) then (是)
+  if (访问登录页?) then (是)
+    :已登录跳转首页 next("/");
+    :NProgress.done();
+    stop
+  endif
+  if (roles为空?) then (是)
+    :首次加载 获取用户信息;
+    :store.dispatch("GetInfo");
+    note right
+      获取:
+      - 用户基本信息
+      - roles角色列表
+      - permissions权限
+    end note
+    :store.dispatch("GenerateRoutes");
+    note right
+      调用/getRouters
+      获取菜单树
+      转为Vue组件引用
+    end note
+    :router.addRoutes(accessRoutes);
+    note right
+      动态添加路由
+      完成后使用replace
+      重新导航到目标
+    end note
+    :next({...to replace: true});
+    stop
+  endif
+  :next() 正常放行;
+else (无token)
+  if (路由在白名单?) then (是)
+    :next() 放行;
+  else
+    :重定向到登录页 next("/login?redirect="+to.path);
+  endif
+  :NProgress.done();
+endif
+
+:afterEach触发;
+:NProgress.done();
+
+stop
+
+note right
+  无需认证页面:
+  /login /register
+end note
+
+note right
+  路由转换:
+  后端返回组件字符串
+  "system/user/index"
+  前端动态导入:
+  ()=>import(@/views/+component)
+end note
+
+@enduml

@@ -1,0 +1,114 @@
+@startuml
+title 智颐养老系统 - 服务器与缓存监控组件
+
+skinparam rectangle {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "ServerController\n/monitor/server" as server #FFE4E1
+rectangle "CacheController\n/monitor/cache" as cache #FFFACD
+
+rectangle "Server 监控数据" as serverData {
+  rectangle "Cpu\nCPU使用率" as cpu {
+    rectangle "逻辑核心数" as cores
+    rectangle "sys/used/wait/free %" as cpuPct
+  }
+  rectangle "Mem\n内存使用" as mem {
+    rectangle "total/used/free" as memBytes
+    rectangle "used%" as memPct
+  }
+  rectangle "Jvm\nJVM运行时" as jvm {
+    rectangle "total/max/free" as jvmBytes
+    rectangle "JDK版本/启动时间" as jvmInfo
+    rectangle "运行时/参数" as jvmRuntime
+  }
+  rectangle "Sys\n系统信息" as sys {
+    rectangle "主机名/IP" as host
+    rectangle "OS名称/架构" as osInfo
+    rectangle "用户目录" as userDir
+  }
+  rectangle "SysFile\n磁盘分区" as disk {
+    rectangle "挂载点/类型" as mount
+    rectangle "total/free/used% " as diskPct
+  }
+}
+
+rectangle "OSHI库\n系统信息采集" as oshi {
+  rectangle "SystemInfo" as sysInfo
+  rectangle "HardwareInfo" as hwInfo
+  rectangle "OSFileStore" as fsInfo
+}
+
+rectangle "Cache 监控数据" as cacheData {
+  rectangle "Redis INFO\n服务器信息" as redisInfo
+  rectangle "dbSize\n键总数" as dbSize
+  rectangle "commandStats\n命令统计" as cmdStats
+}
+
+rectangle "预定义缓存名称" as cacheNames {
+  rectangle "login_tokens\n用户信息" as ct1
+  rectangle "sys_config\n配置信息" as ct2
+  rectangle "sys_dict\n数据字典" as ct3
+  rectangle "captcha_codes\n验证码" as ct4
+  rectangle "repeat_submit\n防重提交" as ct5
+  rectangle "rate_limit\n限流处理" as ct6
+  rectangle "pwd_err_cnt\n密码错误" as ct7
+}
+
+rectangle "缓存操作" as cacheOps {
+  rectangle "getNames\n列出缓存类别" as gNames
+  rectangle "getKeys\nKEYS前缀扫描" as gKeys
+  rectangle "getValue\n读取键值" as gVal
+  rectangle "clearCacheName\n按前缀清除" as cName
+  rectangle "clearCacheKey\n单键删除" as cKey
+  rectangle "clearCacheAll\n清空全部!" as cAll
+}
+
+server --> serverData : 组装
+serverData --> cpu
+serverData --> mem
+serverData --> jvm
+serverData --> sys
+serverData --> disk
+
+server --> oshi : OSHI读取硬件
+oshi --> sysInfo : 初始化
+sysInfo --> hwInfo : 硬件
+sysInfo --> fsInfo : 文件系统
+
+cpu --> cores : 查询
+cpu --> cpuPct : 两次采样
+mem --> memBytes : 计算
+jvm --> jvmBytes : Runtime
+jvm --> jvmInfo : ManagementFactory
+jvm --> jvmRuntime
+sys --> host : IpUtils
+sys --> osInfo : System.getProperty
+
+cache --> cacheData : RedisTemplate.execute
+cache --> cacheNames : 静态列表
+cache --> cacheOps : 管理操作
+
+cacheData --> redisInfo : connection.info()
+cacheData --> dbSize : connection.dbSize()
+cacheData --> cmdStats : connection.info("commandstats")
+
+cacheOps --> gNames
+cacheOps --> gKeys : redisTemplate.keys()
+cacheOps --> gVal : opsForValue().get()
+cacheOps --> cName : redisTemplate.delete()
+cacheOps --> cKey
+cacheOps --> cAll
+
+note right
+  安全隐患:
+  clearCacheAll会
+  删除Redis全部键
+  影响所有在线用户
+  所有缓存数据
+end note
+
+@enduml

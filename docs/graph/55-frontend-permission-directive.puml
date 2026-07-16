@@ -1,0 +1,103 @@
+@startuml
+title 智颐养老系统 - 前端权限指令实现原理
+
+skinparam component {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 8
+}
+
+package "Vue全局指令注册" as directive {
+  component "directive/index.js" as reg {
+    component "Vue.directive('hasRole', hasRole)" as regRole
+    component "Vue.directive('hasPermi', hasPermi)" as regPermi
+  }
+}
+
+package "v-hasPermi 指令" as hasPermi #FFFACD {
+  component "接收绑定值 value=[权限标识]" as input
+  component "从store.getters.permissions\n读取用户权限列表" as getPerm
+  component "检查超级管理员\n*:*:* 通配符" as checkSuper
+  component "检查是否包含任一\n所需权限标识" as checkPerm
+  component "不满足→removeChild(el)\n从DOM移除元素" as removeEl
+}
+
+package "v-hasRole 指令" as hasRole #E0FFFF {
+  component "接收绑定值 value=[角色标识]" as inputRole
+  component "从store.getters.roles\n读取用户角色列表" as getRoles
+  component "检查超级管理员\nadmin 角色" as checkAdmin
+  component "检查是否包含任一\n所需角色标识" as checkRole
+  component "不满足→removeChild(el)\n从DOM移除元素" as removeElRole
+}
+
+package "数据来源" as dataSrc {
+  component "后端API /getInfo" as api
+  component "LoginUser{\n  roles: [admin],\n  permissions: [sys:user:list]\n}" as loginUser
+}
+
+package "Vuex Store" as store {
+  component "user.js\nstate.roles = []\nstate.permissions = []" as userModule
+  component "getters.js\nroles: state=>state.user.roles\npermissions: state=>state.user.permissions" as getters
+}
+
+package "使用示例" as examples {
+  component "<el-button\n v-hasPermi="['system:user:add']"\n 新增用户/>" as btn
+  component "<el-tab\n v-hasRole="['admin']"\n 管理员面板/>" as tab
+  component "<el-table-column\n v-hasPermi="['system:user:edit']"\n 编辑操作/>" as col
+}
+
+package "后端 Server-side 权限" as backend {
+  component "@PreAuthorize(\n  \"@ss.hasPermi\n  ('system:user:list')\")" as preAuth
+  component "PermissionService\n@Service("ss")" as ps
+}
+
+reg -> regPermi : 注册
+reg -> regRole : 注册
+
+hasPermi --> regPermi : 指令定义
+hasRole --> regRole : 指令定义
+
+hasPermi --> input : inserted钩子触发
+input --> getPerm
+getPerm --> checkSuper
+getPerm --> checkPerm
+checkPerm --> removeEl : 无权限
+checkSuper --> removeEl : 非管理员
+
+hasRole --> inputRole
+inputRole --> getRoles
+getRoles --> checkAdmin
+getRoles --> checkRole
+checkRole --> removeElRole
+checkAdmin --> removeElRole
+
+loginUser --> api : 登录后获取
+api --> userModule : 提交Vuex
+userModule --> getters : 导出
+
+store --> hasPermi : store.getters.permissions
+store --> hasRole : store.getters.roles
+
+examples --> btn : 按钮级权限
+examples --> tab : 面板级权限
+examples --> col : 列级权限
+
+backend --> preAuth : API方法注解
+backend --> ps : 提供服务
+
+note right of removeEl
+  权限不足时从DOM删除:
+  el.parentNode.removeChild(el)
+  
+  完全隐藏元素
+  而非disable
+  
+  安全模型:
+  前端做UI显示控制
+  后端@PreAuthorize
+  做API访问控制
+  双层保险
+end note
+
+@enduml

@@ -1,0 +1,82 @@
+@startuml
+title 智颐养老系统 - IoT设备注册流程图
+
+skinparam activity {
+  BackgroundColor #F0FFF0
+  BorderColor #2E8B57
+}
+
+start
+:护理人员填写设备信息;
+note right
+  设备名称/产品型号
+  绑定位置(楼层/房间/床位)
+  位置类型(可穿戴/固定)
+end note
+
+:DeviceController\n@PostMapping("/nursing/device/register");
+
+:DeviceServiceImpl\nregisterDevice(DeviceDto);
+
+:根据deviceName查重;
+if (设备名已存在?) then (是)
+  :抛出异常\n"设备名称已存在";
+  stop
+endif
+
+:根据nodeId查重;
+if (节点ID已存在?) then (是)
+  :抛出异常\n"节点ID已存在";
+  stop
+endif
+
+:根据bindingLocation+product查重;
+if (同一位置已绑定同类产品?) then (是)
+  :抛出异常\n"该位置已绑定此类产品";
+  stop
+endif
+
+:华为云IoTDA注册设备\niotdaClient.addDevice();
+note right
+  调用华为云IoTDA SDK
+  创建设备影子
+  分配iotId和secret
+end note
+
+:获取IoTDA返回的设备凭证;
+
+:保存到本地数据库(device表);
+note right
+  字段: iotId, secret
+  deviceName, productKey
+  bindingLocation
+  locationType
+  physicalLocationType
+end note
+
+:返回注册成功信息;
+
+:设备上线后数据上报;
+
+:AmqpClient接收设备数据;
+note right
+  设备激活后
+  通过AMQP 1.0
+  实时上报数据
+  自动写入device_data表
+end note
+
+if (是否需要同步产品列表?) then (是)
+  :DeviceController\n@GetMapping("/syncProductList");
+  :iotdaClient.listProducts();
+  :保存产品列表到Redis;
+  note right
+    key: IOT_ALL_PRODUCT_LIST
+    前端可查询所有产品
+  end note
+endif
+
+:完成设备注册;
+
+stop
+@enduml

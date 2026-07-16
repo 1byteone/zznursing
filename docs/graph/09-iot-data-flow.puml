@@ -1,0 +1,67 @@
+@startuml
+title 智颐养老系统 - IoT设备数据接入流程图
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "华为云IoT平台" as iot
+participant "AmqpClient\n(ApplicationRunner)" as amqp
+participant "线程池\nExecutorService" as pool
+participant "IDeviceDataService" as dataSvc
+participant "DeviceDataMapper" as mapper
+participant "MySQL\n设备数据表" as db
+
+== 1. 应用启动: 建立AMQP连接 ==
+amqp -> amqp : @PostConstruct\nrun(ApplicationArguments)
+amqp -> amqp : start()
+amqp -> iot : 创建AMQP 1.0连接\n(accessKey + accessCode)
+note right
+  连接参数:
+  host/port/vhost
+  SSL信任所有证书
+  客户端ID = 本机IP
+end note
+iot --> amqp : Connection建立成功
+amqp -> iot : 创建Session
+amqp -> iot : 创建MessageConsumer
+amqp -> iot : 注册MessageListener
+amqp -> amqp : 连接成功, 等待消息
+
+== 2. 设备数据上报 ==
+iot -> amqp : push(Message)
+note right
+  消息内容:
+  topic / messageId
+  notify_data body
+  services: [{serviceId,
+    properties: {key:val}}]
+end note
+amqp -> pool : submit(processMessage)
+pool -> pool : processMessage(message)
+pool -> pool : message.getBody(String)
+pool -> pool : JSON解析
+pool -> pool : 提取notify_data
+
+== 3. 数据转换与存储 ==
+pool -> pool : JSONUtil.toBean\nIotMsgNotifyData
+pool -> dataSvc : batchInsertDeviceData(notifyData)
+dataSvc -> dataSvc : 遍历services
+dataSvc -> dataSvc : 遍历properties\n构建DeviceData对象
+dataSvc -> mapper : batchInsert(List<DeviceData>)
+mapper -> db : INSERT INTO device_data
+db --> mapper : 批量写入成功
+mapper --> dataSvc : 影响行数
+dataSvc --> pool : 完成
+pool --> amqp : ACK
+
+== 4. 后续: 告警规则匹配 ==
+note over dataSvc
+  设备数据入库后
+  后台可基于AlertRule
+  进行告警规则匹配
+end note
+
+@enduml

@@ -1,0 +1,88 @@
+@startuml
+title 智颐养老系统 - IP地址解析与在线用户追踪
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+}
+
+start
+:HTTP请求到达;
+:进入安全过滤链;
+
+:JwtAuthFilter解析Token;
+:SecurityContextHolder设置Authentication;
+
+:TokenService.setUserAgent(LoginUser);
+
+partition "IP获取 (IpUtils)" {
+  :检查 x-forwarded-for 头;
+  if (存在?) then (是)
+    :取第一个非unknown的IP;
+  else
+    :检查 Proxy-Client-IP;
+    if (存在?) then (是)
+      :取第一个非unknown的IP;
+    else
+      :检查 X-Forwarded-For X-Real-IP;
+      :回退到 getRemoteAddr();
+    endif
+  endif
+  :IPv6 localhost转为127.0.0.1;
+}
+
+partition "地理定位 (AddressUtils)" {
+  if (内网IP?) then (是)
+    :返回 内网IP;
+    stop
+  endif
+  if (地址解析未启用?) then (是)
+    :返回 XX XX;
+    stop
+  endif
+  :HTTP GET到whois.pconline.com.cn;
+  :解析JSON提取pro+city;
+  :返回 省份 城市;
+}
+
+partition "设备解析 (UserAgentUtils)" {
+  :读取 User-Agent 请求头;
+  :Bitwalker库解析;
+  :提取浏览器名称;
+  :提取操作系统名称;
+}
+
+:组装LoginUser对象;
+:设置ipaddr loginLocation;
+:设置browser os;
+
+:存入Redis login_tokens:{uuid} TTL 30分钟;
+
+:AsyncFactory.recordLogininfor 异步记录;
+
+partition "在线用户管理" {
+  :SysUserOnlineController 查询列表;
+  :扫描Redis keys login_tokens:*;
+  :LoginUser转SysUserOnline;
+  :支持ipaddr/userName筛选;
+  :返回TableDataInfo;
+}
+
+partition "强制下线" {
+  :forceLogout(tokenId);
+  :删除Redis key login_tokens:{tokenId};
+  :JWT立即失效;
+}
+
+stop
+
+note right
+  不使用黑名单
+  直接删除Redis缓存
+  用户下次请求时
+  JwtAuthFilter找不到
+  登录信息返回401
+end note
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml
+title 智颐养老系统 - 全局异常处理机制
+
+skinparam class {
+  BackgroundColor #FFF5F5
+  BorderColor #CD5C5C
+  FontSize 11
+}
+
+class "客户端" as client
+
+class "GlobalExceptionHandler\n@RestControllerAdvice" as handler #FFE4E1 {
+  + handleAccessDeniedException(): AjaxResult
+  + handleServiceException(): AjaxResult
+  + handleRuntimeException(): AjaxResult
+  + handleException(): AjaxResult
+  + handleBindException(): AjaxResult
+  + handleMethodArgumentNotValid(): AjaxResult
+  + handleDemoModeException(): AjaxResult
+}
+
+class "AjaxResult\n统一响应" as result {
+  + int code
+  + String msg
+  + Object data
+}
+
+class "ServiceException\n业务异常" as se
+class "DemoModeException\n演示模式" as dme
+class "BaseException\n基础异常" as be
+class "UserNotExistsException" as une
+class "UserPasswordNotMatchException" as upn
+class "CaptchaException" as ce
+class "CaptchaExpireException" as cee
+class "BlackListException" as ble
+class "UserPasswordRetryLimitExceed" as upr
+class "FileSizeLimitExceeded" as fsl
+class "FileNameLengthLimitExceeded" as fnl
+class "InvalidExtensionException" as iee
+class "FileUploadException" as fue
+
+se --|> be : 继承
+dme --|> be : 继承
+une --|> be : 继承
+upn --|> be : 继承
+ce --|> be : 继承
+cee --|> be : 继承
+ble --|> be : 继承
+upr --|> be : 继承
+fsl --|> be : 继承
+fnl --|> be : 继承
+iee --|> be : 继承
+fue --|> be : 继承
+
+client --> handler : HTTP请求/异常
+handler --> result : 统一封装返回
+handler ..> se : 捕获处理
+handler ..> dme : 捕获处理
+handler ..> une : 捕获处理
+
+note right of handler
+  @RestControllerAdvice
+  
+  异常转标准JSON返回:
+  {code, msg, data}
+  
+  HTTP状态码:
+  403 - 无权限
+  500 - 业务异常
+  400 - 参数校验
+  401 - 未认证(EntryPoint)
+end note
+
+note left of se: 入住重复/设备重名/合同到期
+note left of dme: 演示模式禁止写操作
+note left of une: 用户不存在/密码错误/黑名单
+
+@enduml

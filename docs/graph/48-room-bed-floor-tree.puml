@@ -1,0 +1,125 @@
+@startuml
+title 智颐养老系统 - 楼层/房间/床位树形结构与设备关联
+
+skinparam class {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+}
+
+class "Floor 楼层" as floor #FFE4E1 {
+  + id: Long
+  + floorName: String
+  + floorNumber: Integer
+  + sortOrder: Integer
+  + status: Integer (0/1)
+  + remark: String
+  --
+  + getRoomsByFloorId()
+  + getRoomsWithNurByFloorId()
+  + getRoomsWithDeviceByFloorId()
+  + getAllFloorsWithNur()
+  + getAllFloorsWithDevice()
+  + getRoomAndBedByBedStatus()
+}
+
+class "Room 房间" as room #FFFACD {
+  + id: Long
+  + floorId: Long
+  + roomName: String
+  + roomNumber: String
+  + roomTypeId: Long
+  + sortOrder: Integer
+  + status: Integer (0/1)
+  --
+  + getRoomsByFloorId()
+}
+
+class "Bed 床位" as bed #E0FFFF {
+  + id: Long
+  + roomId: Long
+  + bedNumber: String
+  + bedName: String
+  + bedStatus: Integer (0/1)
+  + elderId: Long
+  + sortOrder: Integer
+  --
+  + 0=未占用
+  + 1=已占用
+}
+
+class "RoomType 房型" as roomType #F5FFFA {
+  + id: Long
+  + name: String
+  + price: BigDecimal
+  + capacity: Integer
+  + description: String
+  + status: Integer
+}
+
+class "Elder 老人" as elder #FFEFD5 {
+  + id: Long
+  + name: String
+  + bedId: Long
+  + status: Integer
+}
+
+class "NursingElder\n护士关联" as nursingElder #FFF0F5 {
+  + id: Long
+  + elderId: Long
+  + nurseId: Long
+  + nursingLevel: String
+}
+
+class "Device 设备" as device #FFE4E1 {
+  + id: Long
+  + deviceId: String
+  + iotId: String
+  + deviceName: String
+  + productId: String
+  + roomId: Long
+  + status: Integer
+}
+
+class "树形结构查询" as tree {
+  + getRoomAndBedByBedStatus(status)
+  + getRoomsWithNurByFloorId(floorId)
+  + getRoomsWithDeviceByFloorId(floorId)
+  + getAllFloorsWithDevice()
+  + getAllFloorsWithNur()
+}
+
+floor "1" *-- "N" room : 包含
+room "1" *-- "N" bed : 包含
+room "N" -- "1" roomType : 属于
+bed "1" -- "1" elder : 入住
+elder "1" -- "N" nursingElder : 关联护士
+room "1" -- "N" device : 部署
+
+tree --> floor : 递归遍历
+tree --> room
+tree --> bed
+
+note right of tree
+  典型树形查询:
+  
+  GET /elder/floor/
+      getRoomAndBedByBedStatus/0
+  → 返回未占用的完整
+    楼层→房间→床位树
+    用于入住选房
+  
+  GET /elder/floor/
+      getRoomsWithDeviceByFloorId/{id}
+  → 该楼层下所有房间
+    及其IoT设备列表
+    用于设备管理
+end note
+
+note right of floor
+  @TableName("zzyl_floor")
+  楼层基础数据
+  初始楼层: 1-6层
+end note
+
+@enduml

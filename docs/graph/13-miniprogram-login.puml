@@ -1,0 +1,83 @@
+@startuml
+title 智颐养老系统 - 微信小程序登录时序图
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+actor "老人家属" as user
+participant "微信小程序" as mini
+participant "微信服务器" as wxSvr
+participant "FamilyMemberController" as controller
+participant "IFamilyMemberService" as svc
+participant "WechatService" as wechatSvc
+participant "TokenService" as tokenSvc
+participant "FamilyMemberMapper" as mapper
+participant "MySQL" as db
+
+== 1. 用户授权登录 ==
+user -> mini : 点击"微信一键登录"
+mini -> mini : wx.login() 获取code
+mini -> mini : wx.getPhoneNumber() 获取phoneCode
+mini -> mini : 组装 nickName + code + phoneCode
+
+== 2. 后端登录请求 ==
+mini -> controller : POST /member/user/login\n{ nickName, code, phoneCode }
+
+note right of controller
+  MemberInterceptor除外路径
+  不拦截此请求
+end note
+
+controller -> svc : login(UserLoginRequestDto)
+
+== 3. 获取OpenID ==
+svc -> wechatSvc : getOpenid(code)
+wechatSvc -> wxSvr : HTTP GET\nhttps://api.weixin.qq.com/...\n?appid=xxx&secret=xxx&js_code=xxx
+wxSvr --> wechatSvc : { openid, session_key }
+wechatSvc --> svc : openId字符串
+
+== 4. 查询/创建用户 ==
+svc -> mapper : selectOne openId=?
+mapper -> db : SELECT * FROM family_member\nWHERE open_id = ?
+db --> mapper : FamilyMember (或null)
+mapper --> svc : 结果
+
+alt 用户不存在
+  svc -> svc : 创建新的FamilyMember\n设置openId
+end
+
+== 5. 获取手机号 ==
+svc -> wechatSvc : getPhone(phoneCode)
+wechatSvc -> wxSvr : HTTP POST\n获取手机号接口
+wxSvr --> wechatSvc : { phoneNumber }
+wechatSvc --> svc : phone字符串
+
+== 6. 保存/更新用户 ==
+alt 已存在用户且手机号变化
+  svc -> mapper : updateById(新手机号)
+else 新用户
+  svc -> svc : 随机生成昵称\n(吉祥词+手机号后4位)
+  svc -> mapper : insert(新用户)
+end
+
+== 7. 生成JWT Token ==
+svc -> tokenSvc : createToken({userId, nickName})
+tokenSvc -> tokenSvc : 使用HS512签名
+tokenSvc --> svc : JWT token字符串
+svc --> controller : LoginVo{token, nickName}
+controller --> mini : 返回登录结果
+
+== 8. 后续请求鉴权 ==
+note over mini, tokenSvc
+  后续 /member/** 请求
+  MemberInterceptor 拦截并解析JWT
+  提取userId存入UserThreadLocal
+end note
+
+mini -> mini : 存储token\n跳转首页
+user <- mini : 登录成功
+
+@enduml

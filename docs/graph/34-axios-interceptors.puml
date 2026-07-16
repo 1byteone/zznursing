@@ -1,0 +1,83 @@
+@startuml
+title 智颐养老系统 - Axios请求/响应拦截器流程
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #4B0082
+}
+
+start
+:前端发起API请求;
+
+:request拦截器;
+if (token存在 && headers.isToken!=false?) then (是)
+  :添加Authorization:\nBearer {token};
+endif
+
+if (请求方法为GET?) then (是)
+  :tansParams()序列化参数;
+  :拼接到URL查询字符串;
+endif
+
+if (POST/PUT && 非repeatSubmit?) then (是)
+  :计算重复提交指纹;
+  note right: {url}+{data}+{时间}
+  if (同一指纹 < 1秒内重复?) then (是)
+    :reject("数据正在处理\n请勿重复提交");
+    stop
+  endif
+  if (数据 > 5MB?) then (是)
+    :跳过重复检测;
+  endif
+endif
+
+:发送HTTP请求到后端;
+
+if (后端返回二进制?) then (是)
+  :直接返回blob/arraybuffer;
+  stop
+endif
+
+:response拦截器;
+
+if (HTTP 401?) then (是)
+  :弹出确认框\n"登录状态已过期";
+  if (用户确认?) then (是)
+    :store.dispatch('LogOut');
+    :router.push('/index');
+  endif
+  stop
+endif
+
+if (HTTP 500?) then (是)
+  :Message.error(错误信息);
+  stop
+endif
+
+if (code != 200?) then (是)
+  if (code == 601?) then (是)
+    :Message.warning(提示信息);
+  else
+    :Notification.error(错误信息);
+  endif
+  stop
+endif
+
+:返回 response.data;
+
+stop
+
+note right
+  请求配置:
+  baseURL: process.env
+    .VUE_APP_BASE_API
+  timeout: 10000ms
+  
+  响应拦截处理:
+  401 - 重新登录
+  500 - 服务器错误
+  601 - 业务警告
+  200 - 正常返回.data
+end note
+
+@enduml

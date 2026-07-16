@@ -1,0 +1,70 @@
+@startuml
+title 智颐养老系统 - 文件上传流程
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+actor "用户" as user
+participant "前端Vue" as ui
+participant "CommonController" as ctrl
+participant "AliyunOSSOperator" as oss
+participant "阿里云OSS" as aliyun
+
+== 单文件上传 ==
+user -> ui : 选择文件上传
+ui -> ctrl : POST /common/upload\nmultipart/file
+
+ctrl -> ctrl : 获取文件字节
+ctrl -> oss : upload(byte[], filename)
+
+oss -> oss : 构建对象路径
+note right
+  路径格式:
+  yyyy/MM/
+  {UUID}.{扩展名}
+  例:2026/06/
+  a1b2c3d4.png
+end note
+
+oss -> aliyun : putObject(bucket, objectName, content)
+note right
+  Aliyun OSS SDK
+  使用环境变量
+  OSS_ACCESS_KEY_ID
+  OSS_ACCESS_KEY_SECRET
+  认证
+end note
+
+aliyun --> oss : 上传成功
+oss -> oss : 构建访问URL
+note right
+  URL格式:
+  {protocol}//{bucket}.
+  {endpoint}/{objectName}
+end note
+oss --> ctrl : 返回URL
+
+ctrl --> ui : AjaxResult\n{url, fileName, originalFilename}
+
+== 多文件上传 ==
+user -> ui : 选择多个文件
+ui -> ctrl : POST /common/uploads\nmultipart/files
+
+ctrl -> ctrl : 遍历文件列表
+loop 每个文件
+  ctrl -> oss : upload(byte[], filename)
+  oss --> ctrl : URL
+end
+
+ctrl --> ui : AjaxResult\n{urls: [多个URL]}
+
+== 文件下载 ==
+user -> ui : 点击下载
+ui -> ctrl : GET /common/download?fileName=xxx
+ctrl -> ctrl : 读取本地/OSS文件
+ctrl --> ui : 文件流下载
+
+@enduml

@@ -1,0 +1,257 @@
+@startuml
+title 智颐养老系统 - 核心数据实体关系图
+
+skinparam class {
+  BackgroundColor #F8F8FF
+  BorderColor #2E4D7B
+  FontSize 12
+}
+
+class BaseEntity {
+  # String createBy
+  # Date createTime
+  # String updateBy
+  # Date updateTime
+  # String remark
+  # Map params
+}
+
+class Floor {
+  + Long id
+  + String name
+  + String code
+}
+
+class Room {
+  + Long id
+  + String code
+  + Integer sort
+  + String typeName
+  + Long floorId
+  + Integer isDeleted
+}
+
+class Bed {
+  + Long id
+  + String bedNumber
+  + Integer bedStatus
+  + Integer sort
+  + Long roomId
+}
+
+class Elder {
+  + Long id
+  + String name
+  + String image
+  + String idCardNo
+  + Integer sex
+  + Integer status
+  + String phone
+  + Date birthday
+  + String address
+  + Long bedId
+  + String bedNumber
+}
+
+class CheckIn {
+  + Long id
+  + String elderName
+  + Long elderId
+  + String idCardNo
+  + Date startDate
+  + Date endDate
+  + String nursingLevelName
+  + String bedNumber
+  + Integer status
+}
+
+class CheckInConfig {
+  + Long id
+  + Long checkInId
+  + Long nursingLevelId
+  + String nursingLevelName
+  + Date feeStartDate
+  + Date feeEndDate
+  + BigDecimal deposit
+  + BigDecimal nursingFee
+  + BigDecimal bedFee
+  + BigDecimal insurancePayment
+  + BigDecimal governmentSubsidy
+}
+
+class Contract {
+  + Long id
+  + Long elderId
+  + String contractNumber
+  + String agreementPath
+  + String thirdPartyName
+  + String thirdPartyPhone
+  + String elderName
+  + Date startDate
+  + Date endDate
+  + Integer status
+  + Date signDate
+}
+
+class NursingPlan {
+  + Long id
+  + Integer sortNo
+  + String planName
+  + Integer status
+}
+
+class NursingLevel {
+  + Long id
+  + String name
+  + Long planId
+  + BigDecimal fee
+  + Integer status
+  + String description
+}
+
+class NursingProject {
+  + Long id
+  + String name
+  + Integer orderNo
+  + String unit
+  + BigDecimal price
+  + String image
+  + String nursingRequirement
+  + Integer status
+}
+
+class NursingProjectPlan {
+  + Long id
+  + Long planId
+  + Long projectId
+  + String executeTime
+  + Integer executeCycle
+  + Integer executeFrequency
+}
+
+class NursingElder {
+  + Long id
+  + Long nursingId
+  + Long elderId
+}
+
+class FamilyMember {
+  + Long id
+  + String phone
+  + String name
+  + String avatar
+  + String openId
+  + Integer gender
+}
+
+class Reservation {
+  + Long id
+  + String name
+  + String mobile
+  + Date time
+  + String visitor
+  + Integer type
+  + Integer status
+}
+
+class Device {
+  + Long id
+  + String iotId
+  + String secret
+  + String bindingLocation
+  + Integer locationType
+  + Integer physicalLocationType
+  + String deviceName
+  + String productKey
+  + String productName
+  + String nodeId
+  + Integer haveEntranceGuard
+}
+
+class DeviceData {
+  + Long id
+  + String deviceName
+  + String iotId
+  + String productKey
+  + String functionId
+  + String dataValue
+  + Date alarmTime
+}
+
+class HealthAssessment {
+  + Long id
+  + String elderName
+  + String idCard
+  + Integer healthScore
+  + String riskLevel
+  + String nursingLevelName
+  + String reportSummary
+  + String physicalReportUrl
+}
+
+class AlertRule {
+  + Long id
+  + String productKey
+  + String deviceName
+  + String alertRuleName
+  + String operator
+  + String value
+  + Integer duration
+  + Integer status
+}
+
+class RoomType {
+  + Long id
+  + String name
+  + Integer bedCount
+  + BigDecimal price
+  + String introduction
+  + String photo
+  + Integer status
+}
+
+BaseEntity <|-- Floor
+BaseEntity <|-- Room
+BaseEntity <|-- Bed
+BaseEntity <|-- Elder
+BaseEntity <|-- CheckIn
+BaseEntity <|-- CheckInConfig
+BaseEntity <|-- Contract
+BaseEntity <|-- NursingPlan
+BaseEntity <|-- NursingLevel
+BaseEntity <|-- NursingProject
+BaseEntity <|-- NursingElder
+BaseEntity <|-- FamilyMember
+BaseEntity <|-- Reservation
+BaseEntity <|-- Device
+BaseEntity <|-- DeviceData
+BaseEntity <|-- HealthAssessment
+BaseEntity <|-- AlertRule
+BaseEntity <|-- RoomType
+
+Floor "1" --o "N" Room : contains
+Room "1" --o "N" Bed : contains
+Bed "1" --o "1" Elder : assigned to
+Bed "0..1" --o "N" Elder : bed
+Elder "1" --o "N" CheckIn : has
+CheckIn "1" --o "1" CheckInConfig : config
+Elder "1" --o "N" Contract : signs
+Elder "1" --o "N" NursingElder : assigned care
+NursingPlan "1" --o "N" NursingLevel : defines
+NursingPlan "1" --o "N" NursingProjectPlan : includes
+NursingProject "1" --o "N" NursingProjectPlan : used in
+Device "1" --o "N" DeviceData : produces
+
+note right of Floor
+  楼层→房间→床位
+  三级物理位置
+  层级结构
+end note
+
+note right of NursingPlan
+  护理方案→护理等级→
+  护理项目→执行计划
+  四层护理体系
+end note
+
+@enduml

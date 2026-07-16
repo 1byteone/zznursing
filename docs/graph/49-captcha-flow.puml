@@ -1,0 +1,75 @@
+@startuml
+title 智颐养老系统 - 验证码生成与校验流程
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "前端" as front
+participant "CaptchaController" as ctrl
+participant "Kaptcha Producer\n(谷歌验证码库)" as kaptcha
+participant "Redis" as redis
+participant "SysLoginService" as login
+participant "SysRegisterService" as register
+
+== 1. 获取验证码 ==
+front -> ctrl : GET /captchaImage
+ctrl -> ctrl : 查询configService\nselectCaptchaEnabled()
+ctrl -> ctrl : 生成UUID
+ctrl -> ctrl : 判断captchaType
+
+alt math类型
+  ctrl -> kaptcha : captchaProducerMath.createText()
+  note right: 生成算式如 3*5=?@15
+  kaptcha --> ctrl : capText
+  ctrl -> ctrl : 分割@提取 capStr+code
+  ctrl -> kaptcha : createImage("3*5=?")
+  kaptcha --> ctrl : BufferedImage
+else char类型
+  ctrl -> kaptcha : captchaProducer.createText()
+  note right: 生成4位随机字符
+  kaptcha --> ctrl : capStr(code)
+  ctrl -> kaptcha : createImage(capStr)
+  kaptcha --> ctrl : BufferedImage
+end
+
+ctrl -> redis : set captcha_codes:{uuid}\nvalue=code, TTL=2分钟
+ctrl -> ctrl : ImageIO.write→Base64编码
+ctrl --> front : {uuid, img, captchaEnabled}
+
+== 2. 登录/注册时校验 ==
+front -> login : POST /login\n{uuid, code, username, password}
+front -> register : POST /register\n{uuid, code, username, password}
+
+login -> redis : get captcha_codes:{uuid}
+register -> redis : get captcha_codes:{uuid}
+
+redis --> login : storedCode
+redis --> register : storedCode
+
+login -> redis : delete captcha_codes:{uuid}
+register -> redis : delete captcha_codes:{uuid}
+
+alt 校验失败
+  login --> front : CaptchaException
+  register --> front : CaptchaException
+else 校验通过
+  login -> login : 继续认证流程
+  register -> register : 继续注册流程
+end
+
+note right of ctrl
+  Kaptcha配置:
+  captchaProducer(char):
+  宽160x高60, 字体38
+  4字符, ShadowGimpy风格
+  
+  captchaProducerMath:
+  宽160x高60, 字体35
+  自定义算式生成器
+  (加减乘随机)
+end note
+
+@enduml

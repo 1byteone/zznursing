@@ -1,0 +1,76 @@
+@startuml
+title 智颐养老系统 - 健康评估AI解析流程图
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #2E4D7B
+}
+
+start
+:护理人员上传体检报告(PDF);
+
+:HealthAssessmentController\n@PostMapping("/upload");
+
+:阿里云OSS上传体检报告;
+note right
+  aliyunOSSOperator
+  .upload()
+end note
+
+:保存文件URL到响应体;
+
+:PDFUtil.pdfToString()\n提取PDF文本内容;
+
+:Redis Hash存储\nkey: "healthReport"\nfield: idCardNo\nvalue: PDF文本;
+note right
+  TTL: 24小时
+  确保用户一天内
+  可完成提交
+end note
+
+:返回OSS URL給前端;
+
+:前端回显报告信息;
+
+:护理人员录入评估信息;
+
+:前端调用\nPOST /nursing/healthAssessment;
+
+:HealthAssessmentController\n@PostMapping("/");
+
+:insertHealthAssessment();
+
+if (是否需要AI评估?) then (是)
+  :从Redis读取PDF文本;
+
+  :组装AI Prompt\n(包含PDF文本+评估要求);
+
+  :AIModelInvoker.qianfanInvoker(prompt);
+  note right
+    百度千帆 Ernie 5.0
+    OpenAI兼容API
+    返回JSON格式结果
+  end note
+
+  :解析AI返回JSON;
+  note right
+    包含:
+    - healthScore
+    - riskLevel
+    - suggestionForAdmission
+    - nursingLevelName
+    - reportSummary
+    - diseaseRisk
+    - abnormalAnalysis
+    - systemScore
+  end note
+
+  :保存AI补充评估结果;
+else (否)
+  :仅保存基础信息;
+endif
+
+:返回评估ID;
+
+stop
+@enduml

@@ -1,0 +1,237 @@
+@startuml
+title 智颐养老系统 - 护理业务领域类图
+
+skinparam class {
+  BackgroundColor #F0FFF0
+  BorderColor #2E8B57
+  FontSize 12
+}
+
+package "控制器层" as ctrl {
+  class CheckInController {
+    + apply(CheckInApplyDto)
+    + detail(Long): CheckInDetailVo
+    + list()
+    + export()
+  }
+  
+  class ElderController {
+    + list()
+    + getInfo(Long)
+    + add(Elder)
+    + update(Elder)
+    + remove(Long[])
+  }
+  
+  class DeviceController {
+    + list()
+    + syncProductList()
+    + register(DeviceDto)
+    + queryDeviceDetail(String): DeviceDetailVo
+    + queryServiceProperties(String)
+  }
+  
+  class FloorController {
+    + getRoomAndBedByBedStatus(Integer): List<TreeVo>
+    + getAllFloorsWithNur(): List<FloorVo>
+    + getAllFloorsWithDevice(): List<FloorVo>
+  }
+  
+  class HealthAssessmentController {
+    + upload(File, String): HealthReportVo
+    + list()
+  }
+  
+  class FamilyMemberController {
+    + login(UserLoginRequestDto): LoginVo
+    + my()
+  }
+  
+  class ContractController {
+    + list()
+    + updateContractStatus()
+  }
+}
+
+package "服务层" as svc {
+  interface ICheckInService {
+    + apply(CheckInApplyDto)
+    + detail(Long): CheckInDetailVo
+  }
+  
+  interface IElderService {
+    + CRUD methods
+  }
+  
+  interface IDeviceService {
+    + syncProductList()
+    + registerDevice(DeviceDto)
+    + queryDeviceDetail(String): DeviceDetailVo
+    + queryServiceProperties(String)
+  }
+  
+  interface IFloorService {
+    + selectAllByNur(): List<Floor>
+    + getRoomAndBedByBedStatus(Integer): List<TreeVo>
+    + getAllFloorsWithDevice(): List<FloorVo>
+  }
+  
+  interface IHealthAssessmentService {
+    + insertHealthAssessment(): Long
+  }
+  
+  interface IFamilyMemberService {
+    + login(UserLoginRequestDto): LoginVo
+  }
+  
+  interface IContractService {
+    + updateContractStatus()
+  }
+  
+  interface INursingPlanService {
+    + selectNursingPlanVoById(Long): NursingPlanVo
+    + insertNursingPlan(NursingPlanDto)
+    + updateNursingPlan(NursingPlanDto)
+  }
+  
+  interface INursingLevelService {
+    + listAll(): List<NursingLevelVo>
+  }
+  
+  interface INursingElderService {
+    + setNursingElder(List<NursingElderDto>): Boolean
+  }
+  
+  interface IReservationService {
+    + countByTime(): List<Map>
+  }
+}
+
+package "数据访问层" as mapper {
+  interface CheckInMapper {
+    + extends BaseMapper<CheckIn>
+  }
+  
+  interface ElderMapper {
+    + extends BaseMapper<Elder>
+  }
+  
+  interface DeviceMapper {
+    + extends BaseMapper<Device>
+  }
+  
+  interface FloorMapper {
+    + selectAllByNur()
+    + getRoomAndBedByBedStatus(Integer)
+    + getAllFloorsWithDevice()
+  }
+  
+  interface NursingProjectPlanMapper {
+    + batchInsert(List, Long)
+    + selectByNursingPlanId(Long)
+    + deleteByNursingPlanId(Long)
+  }
+}
+
+package "领域模型" as domain {
+  class CheckIn
+  class Elder
+  class Device
+  class Floor
+  class Room
+  class Bed
+  class NursingPlan
+  class NursingLevel
+  class NursingProject
+  class NursingProjectPlan
+  class HealthAssessment
+  class Contract
+  class FamilyMember
+  class Reservation
+}
+
+package "数据传输对象" as dto {
+  class CheckInApplyDto {
+    + CheckInElderDto elder
+    + List<ElderFamilyDto> families
+    + CheckInConfigDto config
+    + CheckInContractDto contract
+  }
+  
+  class DeviceDto {
+    + String iotId
+    + String productKey
+    + String deviceName
+    + Integer locationType
+    + String bindingLocation
+  }
+}
+
+package "视图对象" as vo {
+  class CheckInDetailVo {
+    + CheckInElderVo elder
+    + List<ElderFamilyVo> families
+    + CheckInConfigVo config
+    + Contract contract
+  }
+  
+  class TreeVo {
+    + String value
+    + String label
+    + List<TreeVo> children
+  }
+  
+  class RoomVo {
+    + String floorName
+    + String code
+    + BigDecimal price
+    + List<BedVo> beds
+  }
+  
+  class HealthReportVo {
+    + String summary
+    + HealthAssessmentVo assessment
+    + RiskDistributionVo risk
+    + SystemScore systemScore
+  }
+}
+
+package "IoT消息" as iot {
+  class IotMsgNotifyData {
+    + IotMsgHeader header
+    + IotMsgBody body
+  }
+  
+  class IotMsgHeader {
+    + String productId
+    + String deviceId
+    + String nodeId
+  }
+  
+  class AmqpClient {
+    + implements ApplicationRunner
+    + 连接华为云AMQP
+    + 接收设备消息推送
+    + 调用batchInsertDeviceData
+  }
+}
+
+CheckInController --> ICheckInService
+ElderController --> IElderService
+DeviceController --> IDeviceService
+FloorController --> IFloorService
+HealthAssessmentController --> IHealthAssessmentService
+FamilyMemberController --> IFamilyMemberService
+ContractController --> IContractService
+
+ICheckInService --> CheckInMapper
+IElderService --> ElderMapper
+IDeviceService --> DeviceMapper
+IFloorService --> FloorMapper
+
+CheckInApplyDto ..> CheckInController : 请求体
+CheckInDetailVo ..> CheckInController : 响应体
+
+AmqpClient .> IDeviceService : 批量写入设备数据
+
+@enduml

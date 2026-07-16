@@ -1,0 +1,66 @@
+@startuml
+title 智颐养老系统 - 老人退住业务流程活动图
+
+skinparam activity {
+  BackgroundColor #FFF5F5
+  BorderColor #CD5C5C
+}
+
+|家属/老人|
+start
+:提出退住申请;
+:填写退住原因;
+
+|护理人员|
+:接收退住申请;
+:审核退住原因;
+if (是否符合退住条件?) then (是)
+  :通知家属办理退住手续;
+else (否)
+  :驳回退住申请;
+  stop
+endif
+
+:核算费用(押金抵扣/退款);
+:安排退住体检;
+:解除设备绑定;
+note right
+  Device设备与老人
+  解除关联绑定
+end note
+
+:更新床位状态为"空闲";
+|后端系统|
+:生成解除协议文件;
+:上传解除协议至OSS;
+
+|家属|
+:签署解除协议;
+|后端系统|
+:保存解除协议URL到合同;
+
+|护理人员|
+:确认退住登记完成;
+|后端系统|
+
+:更新老人状态为"已退住"(status=5);
+:更新CheckIn状态为"已退住"(status=1);
+:更新合同状态为"已失效"(status=3);
+  note right
+    ContractTask定时任务
+    平时只能处理过期
+    退住时立即更新状态
+  end note
+
+:清空老人的床位关联;
+:释放关联资源;
+note right
+ - 床位bedId置空
+ - 护工关联解除
+ - 设备绑定解除
+end note
+
+|家属|
+:收到退住完成通知;
+stop
+@enduml

@@ -1,0 +1,75 @@
+@startuml
+title 智颐养老系统 - 前端Vue架构总览
+
+skinparam rectangle {
+  BackgroundColor #F5FFFA
+  BorderColor #2E8B57
+  FontSize 11
+  RoundCorner 8
+}
+
+package "Vuex Store" as store {
+  rectangle "app.js\n侧边栏/设备/尺寸" as app
+  rectangle "user.js\n登录Token/角色/权限" as user
+  rectangle "permission.js\n动态路由管理" as perm
+  rectangle "tagsView.js\n标签页导航" as tags
+  rectangle "settings.js\n布局主题设置" as settings
+  rectangle "dict.js\n字典数据缓存" as dict
+}
+
+package "API层\n(axios)" as api {
+  rectangle "login.js" as apiLogin
+  rectangle "system/user.js" as apiUser
+  rectangle "system/role.js" as apiRole
+  rectangle "system/menu.js" as apiMenu
+  rectangle "system/dept.js" as apiDept
+  rectangle "monitor/*.js" as apiMonitor
+  rectangle "tool/gen.js" as apiGen
+}
+
+package "Vue Router" as router {
+  rectangle "constantRoutes\n/login /register /404" as constR
+  rectangle "dynamicRoutes\n从后端getRouters\n动态加载" as dynR
+}
+
+package "视图层\n(views)" as views {
+  rectangle "system/\n用户/角色/菜单\n部门/岗位/字典/配置" as sysViews
+  rectangle "monitor/\n操作日志/定时任务\n缓存/服务/在线" as monViews
+  rectangle "tool/\n代码生成/表单构建/Swagger" as toolViews
+  rectangle "dashboard/\n统计面板/图表" as dashViews
+}
+
+package "布局组件" as layout {
+  rectangle "Sidebar\n侧边栏" as sidebar
+  rectangle "Navbar\n顶栏" as navbar
+  rectangle "TagsView\n标签页" as tagsView
+  rectangle "AppMain\n主内容区" as appMain
+  rectangle "Settings\n主题设置" as settingsPanel
+}
+
+package "通用组件" as comp {
+  rectangle "Pagination\n分页" as pagination
+  rectangle "Crontab\nCron表达式" as crontab
+  rectangle "FileUpload\n文件上传" as fileUpload
+  rectangle "ImageUpload\n图片上传" as imgUpload
+  rectangle "Editor\n富文本" as editor
+  rectangle "DictTag\n字典标签" as dictTag
+  rectangle "IconSelect\n图标选择" as iconSelect
+  rectangle "SvgIcon\nSVG图标" as svgIcon
+}
+
+store --> api : 调用
+router --> views : 加载组件
+views --> store : 状态管理
+views --> api : 数据请求
+views --> layout : 使用布局
+views --> comp : 使用组件
+
+rectangle "登录流程" as loginFlow {
+  user --> user : Login()→存token
+  user --> user : GetInfo()→角色权限
+  perm --> perm : GenerateRoutes()→动态路由
+  router --> router : addRoutes()→挂载
+}
+
+@enduml

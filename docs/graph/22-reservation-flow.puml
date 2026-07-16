@@ -1,0 +1,72 @@
+@startuml
+title 智颐养老系统 - 预约参观/探访流程
+
+skinparam activity {
+  BackgroundColor #F5FFFA
+  BorderColor #3CB371
+}
+
+|老人家属|
+start
+:打开微信小程序;
+:选择预约类型;
+if (预约类型?) then (参观预约)
+  :填写参观信息;
+  note right: 姓名/手机号/参观时间
+else (探访预约)
+  :填写探访信息;
+  note right: 探访老人姓名/关系/探访时间
+endif
+
+:提交预约申请;
+
+|小程序端|
+:MemberReservationController\nPOST /member/reservation;
+
+|后端系统|
+:ReservationServiceImpl\ninsertReservation();
+
+:设置status=0(待报道);
+
+:保存MySQL;
+
+:返回预约成功;
+
+|老人家属|
+:查看预约记录;
+
+:在小程序中\n我的预约列表;
+note right
+  GET /member/reservation/page
+  显示所有预约记录
+  含状态/时间/类型
+end note
+
+|后端系统|
+:查询当日预约情况;
+note right
+  GET /member/reservation/countByTime
+  查当日各时段可预约名额
+  用于前端展示空闲时段
+  
+  GET /member/reservation/cancelled-count
+  查当天已取消次数
+  用于限制频繁取消
+end note
+
+|老人家属|
+if (行程有变?) then (取消预约)
+  :点击取消预约;
+  |后端系统|
+  :DELETE /member/reservation/{id}/cancel;
+  :更新status=2(已取消);
+endif
+
+|养老院工作人员|
+:后台查看预约列表;
+:安排接待准备;
+:老人到达现场报道;
+:更新status=1(已完成);
+
+stop
+@enduml

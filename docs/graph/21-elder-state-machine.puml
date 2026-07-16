@@ -1,0 +1,65 @@
+@startuml
+title 智颐养老系统 - 老人状态生命周期
+
+skinparam state {
+  BackgroundColor #FFF5EE
+  BorderColor #CD853F
+  FontSize 12
+}
+
+[*] --> 已禁用 : 创建老人档案(初始)
+
+state "已禁用\nstatus=0" as disabled {
+}
+
+state "已启用\nstatus=1" as enabled {
+  [*] -> 正常居住
+  正常居住 -> 请假外出 : 家属/护工申请请假
+  请假外出 -> 正常居住 : 老人返院销假
+}
+
+state "请假外出\nstatus=2" as leave {
+}
+
+state "入住申请中\nstatus=4" as checkingIn {
+}
+
+state "退住申请中\nstatus=3" as checkingOut {
+}
+
+state "已退住\nstatus=5" as checkedOut {
+}
+
+disabled --> enabled : 启用档案
+disabled --> [*] : 删除档案
+
+enabled --> checkingOut : 发起退住流程
+checkingOut --> checkedOut : 退住完成
+checkedOut --> [*] : 归档
+
+enabled --> checkingIn : 发起入住申请
+note right of checkingIn
+  用于第二次以上入住
+  首次入住直接走
+  CheckInApply流程
+end note
+
+leave --> checkingOut : 请假未归转为退住
+leave --> enabled : 返院销假
+
+note right of enabled
+  1=正常入住状态
+  可关联床位/合同/设备
+  有护理人员分配
+  可产生健康评估
+end note
+
+note left of checkedOut
+  5=已退住
+  合同status=3(已失效)
+  床位释放为空闲
+  设备解绑
+  护工关联解除
+end note
+
+@enduml

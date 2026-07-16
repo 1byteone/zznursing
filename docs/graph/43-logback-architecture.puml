@@ -1,0 +1,109 @@
+@startuml
+title 智颐养老系统 - Logback日志架构
+
+skinparam rectangle {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "logback.xml\n配置文件" as config #FFE4E1
+
+rectangle "日志格式定义" as pattern {
+  rectangle "log.pattern:\n%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - [%method,%line] - %msg%n" as logPattern
+}
+
+rectangle "日志路径" as logpath {
+  rectangle "log.path:\n/home/ruoyi/logs" as path
+}
+
+rectangle "Appender 控制台" as console #FFFACD {
+  rectangle "ConsoleAppender" as consType
+}
+
+rectangle "Appender 系统INFO" as fileInfo #E0FFFF {
+  rectangle "RollingFileAppender" as fiType
+  rectangle "sys-info.log\n每日滚动\n保留60天" as fiFile
+  rectangle "LevelFilter\n仅INFO级别" as fiFilter
+}
+
+rectangle "Appender 系统ERROR" as fileError #F5FFFA {
+  rectangle "RollingFileAppender" as feType
+  rectangle "sys-error.log\n每日滚动\n保留60天" as feFile
+  rectangle "LevelFilter\n仅ERROR级别" as feFilter
+}
+
+rectangle "Appender 用户访问" as sysUser #FFEFD5 {
+  rectangle "RollingFileAppender" as suType
+  rectangle "sys-user.log\n每日滚动\n保留60天" as suFile
+}
+
+rectangle "Logger定义" as loggers {
+  rectangle "Root Logger\n(console+file_info+file_error)" as rootLogger
+  rectangle "com.zzyl\nlevel=INFO\n(被yml覆盖为DEBUG)" as zzylLogger
+  rectangle "org.springframework\nlevel=WARN" as springLogger
+  rectangle "sys-user\nlevel=INFO" as sysUserLogger
+}
+
+rectangle "yml覆盖配置" as yml {
+  rectangle "logging.level\ncom.zzyl=debug" as ymlDebug
+  rectangle "Tomcat相关=error" as ymlTomcat
+}
+
+rectangle "使用场景" as usage {
+  rectangle "操作日志\n(LogAspect→DB)" as operLog
+  rectangle "登录日志\n(AsyncFactory→DB)" as loginLog
+  rectangle "业务日志\n(com.zzyl包)" as bizLog
+  rectangle "框架日志\n(Spring Security)" as securityLog
+}
+
+config --> logPattern : 定义
+config --> path : 定义
+config --> console : 配置
+config --> fileInfo : 配置
+config --> fileError : 配置
+config --> sysUser : 配置
+config --> loggers : 配置
+
+fileInfo --> fiFile : 写入
+fileInfo --> fiFilter : 过滤
+fileError --> feFile : 写入
+fileError --> feFilter : 过滤
+sysUser --> suFile : 写入
+
+loggers --> zzylLogger : 注册
+loggers --> springLogger : 注册
+loggers --> sysUserLogger : 注册
+
+yml --> zzylLogger : 覆盖级别
+yml --> ymlDebug
+yml --> ymlTomcat
+
+zzylLogger --> usage : 产生日志
+rootLogger --> console : 输出到stdout
+rootLogger --> fileInfo : INFO日志
+rootLogger --> fileError : ERROR日志
+sysUserLogger --> sysUser : 用户访问日志
+
+note right of logPattern
+  %d      时间戳(无日期)
+  %thread 线程名
+  %-5level 级别(左对齐5字符)
+  %logger{20} 类名(缩写20字符)
+  %method,%line 方法名和行号
+  %msg    消息内容
+  %n      换行
+end note
+
+note right of fiFilter
+  LevelFilter:
+  onMatch=ACCEPT
+  onMismatch=DENY
+  
+  只有INFO级别
+  能写入sys-info.log
+  ERROR警告不入此文件
+end note
+
+@enduml

@@ -1,0 +1,120 @@
+@startuml
+title 智颐养老系统 - Quartz定时任务动态调度
+
+skinparam rectangle {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "SysJobController" as ctrl #FFE4E1
+
+rectangle "SysJob 实体" as jobEntity {
+  rectangle "jobId\n jobName\n jobGroup\n invokeTarget\n cronExpression\n misfirePolicy(0-3)\n concurrent(0/1)\n status(0/1)" as jobFields
+}
+
+rectangle "SysJobServiceImpl\n核心服务" as svc {
+  rectangle "@PostConstruct init()\n启动时同步" as init
+  rectangle "insertJob(job)\n创建" as insert
+  rectangle "updateJob(job)\n更新" as update
+  rectangle "deleteJobById(id)\n删除" as delete
+  rectangle "changeStatus(job)\n暂停/恢复" as change
+  rectangle "run(job) 立即执行" as run
+}
+
+rectangle "ScheduleUtils\nQuartz工具类" as utils {
+  rectangle "createScheduleJob\n创建JobDetail+Trigger" as create
+  rectangle "getJobKey/getTriggerKey\n键名生成" as keys
+  rectangle "handleCronScheduleMisfirePolicy\n失火策略" as misfire
+  rectangle "whiteList(invokeTarget)\n安全检查" as whitelist
+}
+
+rectangle "AbstractQuartzJob\n任务执行基类" as base {
+  rectangle "execute() 入口" as exec
+  rectangle "before() 记录开始" as before
+  rectangle "doExecute() 抽象" as doExec
+  rectangle "after() 记录结束日志" as after
+}
+
+rectangle "QuartzJobExecution\n允许并发" as concurrent
+rectangle "QuartzDisallowConcurrentExecution\n禁止并发" as disallow
+
+rectangle "JobInvokeUtil\n反射调用" as invoke {
+  rectangle "解析invokeTarget\nbeanName.method" as parse
+  rectangle "参数类型推断\nString/Boolean/Long" as paramType
+  rectangle "反射执行目标方法" as reflect
+}
+
+rectangle "业务任务" as tasks {
+  rectangle "ContractTask\n更新合同状态" as contract
+  rectangle "RyTask\n示例任务" as ry
+  rectangle "HelloTask\n示例任务" as hello
+}
+
+rectangle "DB sys_job表" as db
+rectangle "Quartz Scheduler" as scheduler
+
+ctrl --> svc : REST操作
+svc --> jobEntity : 操作数据
+jobEntity --> db : 持久化
+
+svc --> utils : 调度操作
+utils --> scheduler : Quartz原生API
+
+svc --> init : @PostConstruct
+init -> init : scheduler.clear()\n重新加载全部任务
+
+utils --> create : 核心方法
+create -> create : 1.选择JobClass\n2.构建JobDetail\n3.构建CronTrigger\n4.设置JobDataMap\n5.注册到Scheduler
+
+create --> concurrent : concurrent=0
+create --> disallow : concurrent=1
+
+base --> exec
+exec --> before
+exec --> doExec
+exec --> after
+
+concurrent --> base : 继承
+disallow --> base : 继承+@DisallowConcurrent
+
+doExec --> invoke : 委托
+invoke --> parse
+parse --> paramType
+paramType --> reflect
+
+reflect --> tasks : 调用业务方法
+tasks --> contract : 业务任务
+tasks --> ry
+tasks --> hello
+
+scheduler --> base : 触发执行
+
+note right of create
+  JobKey:
+  TASK_CLASS_NAME_ + jobId
+  
+  TriggerKey:
+  TASK_CLASS_NAME_ + jobId
+  
+  JobDataMap:
+  TASK_PROPERTIES → SysJob
+  
+  CronTrigger:
+  从cronExpression构建
+  
+  Misfire策略可配置:
+  0=默认 1=忽略
+  2=立即补执行 3=不补
+end note
+
+note right of whitelist
+  安全控制:
+  禁止rmi:// ldap://
+  禁止http:// https://
+  黑名单关键字检查
+  白名单包路径验证
+end note
+
+@enduml

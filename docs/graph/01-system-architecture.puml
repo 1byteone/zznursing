@@ -1,0 +1,42 @@
+@startuml
+!include <C4/C4_Container>
+!include <C4/C4_Context>
+
+title 智颐养老系统 - 系统架构图
+
+LAYOUT_WITH_LEGEND()
+
+Person(admin, "系统管理员", "后台系统管理员")
+Person(nurse, "护理人员", "养老院护理工作人员")
+Person(family, "老人家属", "通过微信小程序查看老人信息")
+
+System_Boundary(zznursing, "智颐养老系统") {
+  Container(ui, "前端UI", "Vue + Element UI", "后台管理界面，提供用户管理、护理配置、设备监控等功能")
+  Container(api, "API服务", "Spring Boot 2.5.15", "RESTful API 服务，处理前端及小程序请求")
+  
+  ContainerDb(mysql, "MySQL数据库", "MySQL 8", "存储业务数据：老人、护理、床位、合同等")
+  ContainerDb(redis, "Redis缓存", "Redis 7", "缓存登录会话、字典、配置、验证码等")
+  
+  Container(miniapp, "微信小程序", "微信原生小程序", "家属端：预约参观、在线签约、查看健康报告")
+}
+
+System_Ext(aliyunOSS, "阿里云OSS", "文件存储服务：图片、合同PDF、体检报告等")
+System_Ext(huaweiIoT, "华为云IoT", "物联网平台：设备数据接入、命令下发")
+System_Ext(baiduAI, "百度千帆AI", "AI模型：体检报告解析、健康评估")
+System_Ext(wechat, "微信服务端", "微信登录、手机号获取")
+
+Rel(admin, ui, "浏览器访问", "HTTPS")
+Rel(nurse, ui, "浏览器访问", "HTTPS")
+Rel(family, miniapp, "微信小程序", "HTTPS")
+Rel(ui, api, "REST API", "JSON/HTTP")
+Rel(miniapp, api, "REST API", "JSON/HTTP")
+Rel(api, mysql, "读写数据", "JDBC")
+Rel(api, redis, "缓存读写", "Jedis/Lettuce")
+Rel(api, aliyunOSS, "文件上传下载", "HTTP/SDK")
+Rel(api, baiduAI, "AI调用", "HTTP/OpenAI API")
+Rel(api, wechat, "登录验证", "HTTPS")
+Rel(huaweiIoT, api, "AMQP消息推送", "设备数据")
+Rel(api, huaweiIoT, "IoT命令下发", "HTTP/SDK")
+
+SHOW_LEGEND()
+@enduml

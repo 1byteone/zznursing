@@ -1,0 +1,82 @@
+@startuml
+title 智颐养老系统 - CI/CD流水线活动图
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #2E4D7B
+}
+
+start
+:开发提交代码到Git仓库
+(GIT_TAG分支);
+
+:Jenkins触发\n(参数化构建);
+
+:Stage: 清除工作空间
+cleanWs();
+
+:Stage: 拉取Git代码
+checkout(GIT_TAG);
+note right
+  凭证: Gitee_ID
+  URL: GIT_URL
+end note
+
+:Stage: Maven打包
+mvn clean install -DskipTests;
+
+if (构建成功?) then (是)
+  :Stage: 构建Docker镜像;
+  :docker build -t {service}:{tag}\n-f Dockerfile .;
+
+  :Stage: 部署服务;
+  :执行deploy.sh脚本;
+  note right
+    停止旧容器
+    启动新容器
+    端口映射
+  end note
+
+  :部署成功;
+  :服务健康检查;
+else (否)
+  :Stage: 构建失败通知;
+  :发送构建失败告警;
+  stop
+endif
+
+:Stage: 检查运行状态;
+if (服务正常?) then (是)
+  :发送部署成功通知;
+else (否)
+  :回滚到上一版本;
+  :发送回滚通知;
+endif
+
+:完成;
+
+stop
+
+note right
+  Jenkins参数:
+  GIT_TAG: 分支/标签
+  GIT_URL: Git仓库地址
+  DOCKER_TAG: 镜像版本
+  services: 服务列表
+  (逗号分隔)
+  ws: 工作空间路径
+  
+  Docker部署示例:
+  cd target/
+  ~/deploy.sh {service}
+  {DOCKER_TAG}
+  
+  deploy.sh内容:
+  docker stop {service}
+  docker rm {service}
+  docker run -d --name {service}
+    -p 9000:8080
+    {service}:{tag}
+end note
+
+@enduml

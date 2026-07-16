@@ -1,0 +1,78 @@
+@startuml
+title 智颐养老系统 - 限流器AOP执行流程
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "客户端" as client
+participant "Controller方法\n@RateLimiter" as ctrl
+participant "RateLimiterAspect" as aspect
+participant "RedisTemplate" as redis
+participant "Redis Lua脚本" as lua
+
+== 请求到达 ==
+client -> ctrl : HTTP请求
+
+ctrl -> aspect : @Before切入
+aspect -> aspect : 获取注解参数
+note right
+  @RateLimiter(
+    time = 60,   窗口秒数
+    count = 10, 最大请求数
+    limitType = IP
+  )
+end note
+
+aspect -> aspect : getCombineKey()
+note right
+  复合Key格式:
+  rate_limit:
+  {基础key}.{IP}.
+  {类名}-{方法名}
+end note
+
+== 执行Lua脚本 ==
+aspect -> redis : execute(limitScript,\n[combineKey], [count, time])
+
+redis -> lua : EVAL脚本
+
+lua -> lua : local current =\nredis.call('incr',key)
+lua -> lua : if current == 1 then\n  redis.call('expire',key,time)
+lua -> lua : return current
+
+lua --> redis : 当前计数
+
+redis --> aspect : 返回计数结果
+
+== 限流判断 ==
+alt 计数 <= 最大次数
+  aspect --> ctrl : 放行(proceed)
+  ctrl -> ctrl : 正常执行业务
+  ctrl --> client : 返回正常响应
+else 计数 > 最大次数
+  aspect -> aspect : 抛出ServiceException
+  note right: "访问过于频繁，请稍候再试"
+  aspect --> client : 429 Too Many Requests
+end
+
+note left of lua
+  Lua脚本(原子操作):
+  local key = KEYS[1]
+  local count = ARGV[1]
+  local time = ARGV[2]
+  
+  local current =
+    redis.call('incr', key)
+  
+  if current == 1 then
+    redis.call('expire',
+      key, time)
+  end
+  
+  return current
+end note
+
+@enduml

@@ -1,0 +1,105 @@
+@startuml
+title 智颐养老系统 - 字典管理数据流
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "字典类型管理\nSysDictTypeController" as typeCtrl #FFE4E1
+rectangle "字典数据管理\nSysDictDataController" as dataCtrl #FFFACD
+
+rectangle "SysDictType" as typeModel {
+  rectangle "dictId: Long\n dictName: String\n dictType: String\n status: Integer\n remark: String" as typeFields
+}
+
+rectangle "SysDictData" as dataModel {
+  rectangle "dictCode: Long\n dictSort: Integer\n dictLabel: String\n dictValue: String\n dictType: String\n cssClass: String\n listClass: String\n isDefault: String\n status: Integer" as dataFields
+}
+
+rectangle "MySQL\nsys_dict_type\nsys_dict_data" as db
+
+rectangle "Redis缓存\nsys_dict:{dictType}" as redis
+
+rectangle "启动预热\n@PostConstruct init()" as warmup
+
+rectangle "DictUtils\n工具类" as utils {
+  rectangle "getDictCache(key)\n从缓存读取" as getCache
+  rectangle "setDictCache(key,list)\n写入缓存" as setCache
+  rectangle "clearDictCache()\n清除全部字典缓存" as clearCache
+  rectangle "getDictLabel(type,value)\n值转标签" as valToLabel
+  rectangle "getDictValue(type,label)\n标签转值" as labelToVal
+}
+
+rectangle "前端调用" as front {
+  rectangle "GET /dict/data/type/{type}\n获取字典下拉" as getByType
+  rectangle "字典组件\nel-select + dictData" as comp
+}
+
+rectangle "CRUD操作" as crud {
+  rectangle "创建/更新字典" as create
+  rectangle "刷新缓存" as refresh
+  rectangle "删除字典" as remove
+}
+
+typeCtrl --> typeModel : CRUD
+dataCtrl --> dataModel : CRUD
+
+typeModel --> db : 持久化
+dataModel --> db : 持久化
+
+warmup -> warmup : 查询所有status=0的字典数据\n按dictType分组\n排序后存入Redis
+
+db --> warmup : @PostConstruct加载
+
+warmup --> redis : 批量setCache
+
+front --> getByType : 前端数据绑定
+getByType --> dataCtrl : 代理调用
+dataCtrl --> utils : getDictCache(type)
+utils --> redis : get 查询
+redis --> utils : JSONArray
+utils --> dataCtrl : List<SysDictData>
+dataCtrl --> front : 字典列表
+
+note right
+  缓存未命中时:
+  dataCtrl回表查询DB
+  → setDictCache回填Redis
+end note
+
+crud --> create : insert/update
+create --> db : 写数据库
+create --> utils : clearDictCache
+utils --> redis : 删除所有sys_dict:*
+crud --> refresh : 主动刷新
+refresh --> utils : clearDictCache
+refresh --> warmup : 重新加载
+
+note right of warmup
+  启动时自动加载
+  所有启用(status=0)
+  的字典数据
+  按dictType分组存储
+  
+  缓存键示例:
+  sys_dict:sys_yes_no
+  sys_dict:sys_notice_status
+  sys_dict:sys_oper_type
+  ...
+end note
+
+note right of valToLabel
+  工具方法:
+  DictUtils.getDictLabel(
+    "sys_yes_no", "0"
+  ) → "否"
+  
+  DictUtils.getDictValue(
+    "sys_yes_no", "是"
+  ) → "1"
+end note
+
+@enduml

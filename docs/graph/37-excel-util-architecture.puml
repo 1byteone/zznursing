@@ -1,0 +1,84 @@
+@startuml
+title 智颐养老系统 - Excel工具类架构
+
+skinparam rectangle {
+  BackgroundColor #F5FFFA
+  BorderColor #3CB371
+  FontSize 11
+  RoundCorner 8
+}
+
+rectangle "ExcelUtil<T>\n通用泛型工具类" as excel #FFE4E1
+
+rectangle "@Excel注解" as annotation {
+  rectangle "name 列名" as fName
+  rectangle "sort 排序" as fSort
+  rectangle "dateFormat 日期格式" as fDate
+  rectangle "dictType 字典类型" as fDict
+  rectangle "readConverterExp 读取转换" as fRead
+  rectangle "cellType 单元格类型" as fCell
+  rectangle "width 列宽" as fWidth
+  rectangle "isStatistics 是否统计" as fStat
+  rectangle "isImport 是否导入" as fImport
+  rectangle "isExport 是否导出" as fExport
+  rectangle "align 对齐方式" as fAlign
+  rectangle "height 行高" as fHeight
+  rectangle "prompt 提示信息" as fPrompt
+  rectangle "combo 下拉框值" as fCombo
+  rectangle "targetAttr 目标属性" as fTarget
+  rectangle "image 是否图片" as fImage
+}
+
+rectangle "核心方法" as methods {
+  rectangle "exportExcel()\n导出数据到文件" as export
+  rectangle "importExcel()\n从文件导入数据" as import_
+  rectangle "downloadTemplate()\n下载导入模板" as template
+  rectangle "write()\n写入响应流" as write
+}
+
+rectangle "Apache POI引擎" as poi {
+  rectangle "HSSFWorkbook\n.xls格式" as xls
+  rectangle "XSSFWorkbook\n.xlsx格式" as xlsx
+  rectangle "SXSSFWorkbook\n流式写入(大数据)" as sxssf
+}
+
+rectangle "功能特性" as features {
+  rectangle "字典值自动转换" as dict
+  rectangle "公式注入防护" as formula
+  rectangle "图片导出" as img
+  rectangle "数据下拉校验" as validate
+  rectangle "统计行自动计算" as stats
+  rectangle "多级字段解析" as multiField
+  rectangle "自定义处理适配" as adapter
+}
+
+rectangle "回调接口" as callbacks {
+  rectangle "ExcelHandlerAdapter\n自定义数据处理" as handler
+}
+
+excel --> annotation : 读取字段注解
+excel --> methods : 提供API
+methods --> poi : 底层依赖
+excel --> features : 支持
+excel --> callbacks : 可扩展
+
+note right of methods
+  方法签名:
+  exportExcel(response, list, sheetName)
+  importExcel(file, isCover)
+  downloadTemplate(response)
+end note
+
+note right of features
+  公式注入防护:
+  检测单元格以
+  = - + @ 开头的值
+  自动加前缀防止执行
+  
+  图片导出:
+  通过@Excel(image=true)
+  将字段值作为图片路径
+  嵌入到单元格中
+end note
+
+@enduml

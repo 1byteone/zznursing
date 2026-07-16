@@ -1,0 +1,65 @@
+@startuml
+title 智颐养老系统 - 登录认证时序图
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+actor "用户" as user
+participant "前端UI" as ui
+participant "SysLoginController" as controller
+participant "SysLoginService" as loginSvc
+participant "CaptchaController" as captcha
+participant "AuthenticationManager" as authMgr
+participant "UserDetailsServiceImpl" as userDetail
+participant "TokenService" as tokenSvc
+participant "Redis" as redis
+participant "数据库" as db
+
+== 1. 获取验证码 ==
+user -> ui : 访问登录页面
+ui -> captcha : GET /captchaImage
+captcha -> redis : 存储验证码(uuid, 结果)
+redis --> captcha : OK
+captcha --> ui : 返回base64图片+uuid
+
+== 2. 提交登录 ==
+user -> ui : 输入用户名/密码/验证码
+ui -> controller : POST /login(username, password, code, uuid)
+controller -> loginSvc : login()
+loginSvc -> redis : 验证验证码
+redis --> loginSvc : 验证结果
+loginSvc -> authMgr : authenticate(token)
+authMgr -> userDetail : loadUserByUsername(username)
+userDetail -> db : 查询用户信息
+db --> userDetail : SysUser
+userDetail --> authMgr : LoginUser(用户+权限)
+authMgr --> loginSvc : Authentication
+loginSvc -> tokenSvc : createToken(loginUser)
+tokenSvc -> redis : 存储LoginUser(UUID)
+redis --> tokenSvc : OK
+tokenSvc --> loginSvc : JWT token
+loginSvc -> db : 更新最后登录IP/时间
+loginSvc --> controller : AjaxResult(token)
+controller --> ui : 返回token
+
+== 3. 获取用户信息 ==
+ui -> controller : GET getInfo(Header: Bearer token)
+controller -> tokenSvc : 解析token
+tokenSvc -> redis : 获取LoginUser
+redis --> tokenSvc : LoginUser
+tokenSvc --> controller : LoginUser
+controller --> ui : 用户信息+角色+权限
+
+== 4. 获取路由菜单 ==
+ui -> controller : GET getRouters
+controller -> menuSvc : selectMenuTreeByUserId()
+menuSvc -> db : 查询可用菜单
+db --> menuSvc : List<SysMenu>
+menuSvc --> controller : List<RouterVo>
+controller --> ui : 动态路由配置
+ui -> user : 渲染首页菜单
+
+@enduml

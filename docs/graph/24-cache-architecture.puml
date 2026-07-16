@@ -1,0 +1,87 @@
+@startuml
+title 智颐养老系统 - 缓存架构总览
+
+skinparam database {
+  BackgroundColor #FDF5E6
+  BorderColor #D2691E
+  FontSize 11
+}
+
+database "Redis 服务" as redis {
+  rectangle "Token会话缓存" as token {
+  }
+  rectangle "验证码缓存" as captcha {
+  }
+  rectangle "字典缓存" as dict {
+  }
+  rectangle "配置缓存" as config {
+  }
+  rectangle "IoT产品列表" as iotProduct {
+  }
+  rectangle "IoT设备最新数据" as iotDevice {
+  }
+  rectangle "防重复提交" as repeatSubmit {
+  }
+  rectangle "速率限制" as rateLimit {
+  }
+  rectangle "密码错误计数" as pwdErr {
+  }
+  rectangle "健康报告临时存储" as healthReport {
+  }
+}
+
+rectangle "缓存使用场景" as usage {
+  rectangle "登录认证\nTokenService" as login
+  rectangle "验证码\nCaptchaController" as captchaCtrl
+  rectangle "字典数据\nSysDictDataService" as dictSvc
+  rectangle "系统配置\nSysConfigService" as configSvc
+  rectangle "设备产品列表\nDeviceService" as deviceSvc
+  rectangle "设备最新数据\nRoomService" as roomSvc
+  rectangle "重复提交检测\nSameUrlDataInterceptor" as repeatSvc
+  rectangle "速率限制\nRateLimiterAspect" as rateSvc
+  rectangle "密码重试限制\nSysPasswordService" as pwdSvc
+  rectangle "健康评估PDF\nHealthAssessmentController" as healthSvc
+}
+
+login --> token : login_tokens:{uuid}
+captchaCtrl --> captcha : captcha_codes:{uuid}
+dictSvc --> dict : sys_dict:{type}
+configSvc --> config : sys_config:{key}
+deviceSvc --> iotProduct : iot_all_product_list
+roomSvc --> iotDevice : iot_device_last_data:{iotId}
+repeatSvc --> repeatSubmit : repeat_submit:{url}:{params}
+rateSvc --> rateLimit : rate_limit:{key}
+pwdSvc --> pwdErr : pwd_err_cnt:{username}
+healthSvc --> healthReport : healthReport:{idCardNo}
+
+note right of token
+  Key: login_tokens:{uuid}
+  Value: LoginUser(JSON)
+  TTL: 30分钟
+  每次访问自动续期
+  <20min时刷新过期时间
+end note
+
+note right of captcha
+  Key: captcha_codes:{uuid}
+  Value: 验证码结果
+  TTL: 5分钟
+  使用后立即删除
+end note
+
+note right of dict
+  Key: sys_dict:{type}
+  Value: 字典数据列表(JSON)
+  修改字典时清除缓存
+end note
+
+note right of iotDevice
+  Hash结构
+  Key: iot_device_last_data
+  Field: {iotId}
+  Value: 设备最近上报数据
+  AMQP接收时实时更新
+  Room查询时从此获取
+end note
+
+@enduml

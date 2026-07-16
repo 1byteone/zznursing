@@ -1,0 +1,45 @@
+@startuml
+title 智颐养老系统 - 合同全生命周期状态机图
+
+skinparam state {
+  BackgroundColor #F0F8FF
+  BorderColor #2E4D7B
+  FontSize 12
+}
+
+[*] --> 未生效 : 创建合同\n(签约后初始状态)
+
+state "未生效\n(status=0)" as inactive {
+  [*] -> 待签署
+  待签署 -> 已签署 : 家属在线签署合同
+}
+
+inactive --> 已生效 : 护理人员确认生效\n(入住登记完成)
+
+state "已生效\n(status=1)" as active {
+  [*] -> 正常履行
+  正常履行 -> 即将到期 : 距到期<30天
+}
+
+state "已过期\n(status=2)" as expired
+note right of expired : 合同期满自动转换\nContractTask定时检查
+
+state "已失效\n(status=3)" as invalidated
+note right of invalidated : 退住时发起解除流程\n需上传解除协议
+
+active --> expired : 合同到期\n(ContractTask定时任务)
+active --> invalidated : 老人退住\n(提前解除合同)
+inactive --> invalidated : 签约前取消入住
+
+expired --> [*] : 合同归档
+invalidated --> [*] : 合同归档
+
+note top of active
+  合同生效期间:
+  - 费用按配置周期结算
+  - 护理服务持续执行
+  - 设备监控持续进行
+  - 可进行续签操作
+end note
+
+@enduml

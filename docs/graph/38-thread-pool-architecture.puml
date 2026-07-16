@@ -1,0 +1,74 @@
+@startuml
+title 智颐养老系统 - 线程池架构
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 8
+}
+
+package "ThreadPoolConfig" as config #FFE4E1 {
+  rectangle "threadPoolTaskExecutor\n(主线程池)" as mainPool
+  rectangle "scheduledExecutorService\n(定时任务线程池)" as schedulePool
+}
+
+package "主线程池 (50/200/1000)" as mainPoolDetail #FFFACD {
+  rectangle "corePoolSize: 50" as core
+  rectangle "maxPoolSize: 200" as max
+  rectangle "queueCapacity: 1000" as queue
+  rectangle "keepAliveSeconds: 300" as keepalive
+  rectangle "RejectedExecutionHandler:\nCallerRunsPolicy" as reject
+}
+
+package "定时任务线程池" as scheduleDetail #E0FFFF {
+  rectangle "核心线程: 由ScheduledThreadPoolExecutor管理" as sCore
+  rectangle "Daemon: true" as daemon
+  rectangle "命名: schedule-pool-%d" as naming
+  rectangle "RejectedExecutionHandler:\nCallerRunsPolicy" as sReject
+  rectangle "afterExecute()\n异常打印" as afterExec
+}
+
+package "使用场景" as usage {
+  rectangle "AsyncFactory.recordOper\n记录操作日志" as logTask
+  rectangle "AsyncFactory.recordLogininfor\n记录登录日志" as loginTask
+  rectangle "AmqpClient.executorService\n处理IoT消息推送" as iotTask
+  rectangle "@Async注解\n异步方法调用" as asyncTask
+  rectangle "@Scheduled\n定时任务" as scheduledTask
+}
+
+package "生命周期管理" as lifecycle {
+  rectangle "AsyncManager\n单例调度器" as asyncMgr
+  rectangle "ShutdownManager\n@PreDestroy" as shutdown
+}
+
+mainPool --> mainPoolDetail
+schedulePool --> scheduleDetail
+
+mainPoolDetail --> usage : 执行异步任务
+scheduleDetail --> usage : 执行定时任务
+
+usage --> lifecycle : 管理
+lifecycle --> shutdown : 应用关闭时
+shutdown -> shutdown : shutdownAndAwaitTermination\n优雅关闭线程池
+
+note right of mainPoolDetail
+  任务提交流程:
+  1. 核心线程(50)满
+  2. 加入阻塞队列(1000)
+  3. 队列满时扩到最大(200)
+  4. 超出拒绝策略:
+     CallerRunsPolicy
+     (由提交者线程执行)
+end note
+
+note right of schedulePool
+  定时任务线程池:
+  用于@Scheduled
+  和AsyncManager调度
+  守护线程模式
+  JVM退出时不等待
+  自动打印异常堆栈
+end note
+
+@enduml

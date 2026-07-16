@@ -1,0 +1,69 @@
+@startuml
+title 智颐养老系统 - Swagger API文档配置
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "SwaggerConfig\n@Configuration" as config #FFE4E1
+
+rectangle "Docket Bean\nOpenAPI 3.0 (OAS_30)" as docket #FFFACD {
+  rectangle "标题: 中州养老系统_接口文档" as title
+  rectangle "描述: 管理后端接口" as desc
+  rectangle "版本: 3.8.9" as version
+  rectangle "联系方式" as contact
+}
+
+rectangle "API筛选" as filter {
+  rectangle "选择策略\n@ApiOperation注解" as select
+  rectangle "路径策略\nPathSelectors.any()" as path
+}
+
+rectangle "安全方案" as security {
+  rectangle "ApiKey\nAuthorization\n(Header)" as apiKey
+  rectangle "SecurityContext\n全部路径需要认证" as ctx
+}
+
+rectangle "外部配置" as external {
+  rectangle "swagger.enabled" as enabled
+  rectangle "swagger.pathMapping\n/dev-api" as mapping
+}
+
+rectangle "控制器注解" as controllers {
+  rectangle "@Api\n类级别描述" as api
+  rectangle "@ApiOperation\n方法级别描述" as apiOp
+  rectangle "@ApiParam\n参数描述" as apiParam
+  rectangle "@ApiModel\n模型描述" as apiModel
+}
+
+rectangle "前端访问" as frontend {
+  rectangle "zzyl-ui\n/tool/swagger" as uiPage
+  rectangle "访问URL\n/swagger-ui.html" as url
+}
+
+config --> docket : @Bean
+docket --> filter : 配置
+docket --> security : 配置
+docket --> external : 读取
+external --> config : 注入
+
+controllers --> docket : 被扫描
+uiPage --> url : 内嵌页面
+
+note right of docket
+  @Bean createRestApi()
+  返回Docket实例
+  DocumentationType.OAS_30
+end note
+
+note right of security
+  所有API请求
+  需要在Header携带
+  Authorization: Bearer {token}
+  全局安全配置
+end note
+
+@enduml

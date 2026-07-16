@@ -1,0 +1,80 @@
+@startuml
+title 智颐养老系统 - 动态数据源切换机制
+
+skinparam rectangle {
+  BackgroundColor #FFF8F0
+  BorderColor #D2691E
+  FontSize 11
+  RoundCorner 8
+}
+
+rectangle "DruidConfig" as config #FFE4E1
+rectangle "DruidProperties" as props
+
+rectangle "masterDataSource" as master
+rectangle "slaveDataSource\n(条件:enabled=true)" as slave
+
+rectangle "DynamicDataSource\n(扩展AbstractRoutingDataSource)" as dynamic #FFFACD {
+  rectangle "determineCurrentLookupKey()" as lookup
+}
+
+rectangle "DynamicDataSource\nContextHolder" as holder #F0FFF0 {
+  rectangle "ThreadLocal<String>\nsetDataSourceType()" as setDS
+  rectangle "getDataSourceType()" as getDS
+  rectangle "clearDataSourceType()" as clearDS
+}
+
+rectangle "DataSourceAspect\n@Aspect @Order(1)" as aspect #FFE4E1
+
+rectangle "业务层\n@Service/@Repository" as biz
+
+rectangle "MySQL主库\n(写)" as masterDb
+rectangle "MySQL从库\n(读)" as slaveDb
+
+config --> props : 读取配置
+props --> master : spring.datasource.druid.master.*
+props --> slave : spring.datasource.druid.slave.*
+
+master --> dynamic : 注册为目标数据源
+slave --> dynamic : 注册为目标数据源
+
+dynamic --> lookup : 选择数据源
+
+holder --> dynamic : 提供当前Key
+aspect <.. holder : 设置/清理
+
+aspect --> biz : 环绕通知
+
+note right of aspect
+  @DataSource(DataSourceType.SLAVE)
+  public List<User> list() {
+    // 查询走从库
+  }
+  
+  或类级别:
+  @DataSource(DataSourceType.MASTER)
+  @Service
+  public class UserServiceImpl
+end note
+
+note right of holder
+  ThreadLocal实现
+  避免线程安全问题
+  每次请求独立上下文
+  用完后必须清理
+end note
+
+biz --> dynamic : 注入
+dynamic --> masterDb : 写操作
+dynamic --> slaveDb : 读操作
+
+note bottom of aspect
+  执行流程:
+  1. @Around拦截
+  2. 解析@DataSource注解
+  3. 设置DS到ThreadLocal
+  4. proceed()执行业务
+  5. finally清除DS
+end note
+
+@enduml

@@ -1,0 +1,104 @@
+@startuml
+title 智颐养老系统 - 华为云IoT集成架构
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 8
+}
+
+package "配置层" as config {
+  rectangle "IotClientConfig\n@Configuration" as iotConfig
+  rectangle "HuaWeiIotConfigProperties\n@ConfigurationProperties" as props
+}
+
+package "华为云IoTDA SDK" as iotSdk {
+  rectangle "IoTDAClient" as iotda
+  rectangle "BasicCredentials\n(ak/sk认证)" as cred
+}
+
+package "设备管理服务" as deviceSvc {
+  rectangle "IDeviceService" as svc
+  rectangle "DeviceServiceImpl" as impl {
+    rectangle "syncProductList()" as syncProd
+    rectangle "registerDevice()" as regDev
+    rectangle "queryDeviceDetail()" as queryDetail
+    rectangle "customUpdateDevice()" as updateDev
+    rectangle "customDeleteDeviceById()" as delDev
+    rectangle "queryServiceProperties()" as queryProps
+    rectangle "queryProduct()" as queryProd
+  }
+}
+
+package "数据接入" as ingest {
+  rectangle "AmqpClient\n(ApplicationRunner)" as amqp
+  rectangle "IDeviceDataService\nbatchInsertDeviceData()" as dataSvc
+  rectangle "DeviceDataMapper" as dataMapper
+  database "device_data\n设备数据表" as dataDb
+  database "Redis\niot_device_last_data" as redisCache
+}
+
+package "华为云IoT平台" as hwIot {
+  rectangle "设备接入服务\nIoTDA" as iotdaSvc
+  rectangle "AMQP 1.0\n消息队列" as amqpQueue
+}
+
+config --> props : 读取配置
+props --> iotConfig : ak/sk/region/projectId
+iotConfig --> iotSdk : 创建IoTDAClient
+
+impl --> iotda : 注册/查询/更新/删除设备
+syncProd --> iotda : listProducts()
+regDev --> iotda : addDevice()
+queryDetail --> iotda : showDevice()
+updateDev --> iotda : updateDevice()
+delDev --> iotda : deleteDevice()
+queryProps --> iotda : showDeviceShadow()
+queryProd --> iotda : listServiceCapabilities()
+
+amqp --> amqpQueue : 订阅设备消息
+amqp --> dataSvc : processMessage()
+dataSvc --> dataMapper : batchInsert()
+dataMapper --> dataDb : INSERT
+dataSvc --> redisCache : 缓存最新数据
+
+iotdaSvc --> amqpQueue : 设备数据推送
+
+note right of props
+  配置项:
+  huaweicloud:
+    ak: ${ACCESS_KEY}
+    sk: ${SECRET_KEY}
+    regionId: cn-east-3
+    projectId: ${PROJECT_ID}
+    endpoint: ${ENDPOINT}
+    amqp:
+      host: ${AMQP_HOST}
+      port: 5671
+      vhost: default
+      queueName: ${QUEUE}
+      accessCode: ${CODE}
+    connectionCount: 3
+    useSsl: true
+end note
+
+note right of amqp
+  AmqpClient:
+  @Component
+  implements ApplicationRunner
+  
+  启动时建立3个
+  AMQP 1.0连接
+  (connectionCount=3)
+  
+  使用Qpid JMS客户端
+  消息监听器异步处理
+  线程池executorService
+  提交处理任务
+  解析JSON消息体
+  提取services数据
+  batchInsert到device_data
+end note
+
+@enduml

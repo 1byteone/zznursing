@@ -1,0 +1,73 @@
+@startuml
+title 智颐养老系统 - AOP操作日志记录流程
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "Controller方法" as ctrl
+participant "LogAspect" as logAspect
+participant "SecurityUtils" as secUtil
+participant "HttpServletRequest" as request
+participant "AsyncManager" as async
+participant "AsyncFactory" as factory
+participant "线程池" as pool
+participant "ISysOperLogService" as logSvc
+participant "MySQL" as db
+
+== @Before: 记录开始时间 ==
+ctrl -> logAspect : @Log("健康评估-新增")
+logAspect -> logAspect : TIME_THREADLOCAL.set(now)
+logAspect --> ctrl : 继续执行
+
+== 方法执行 ==
+ctrl -> ctrl : 执行业务逻辑
+
+alt 成功返回
+  ctrl --> logAspect : @AfterReturning\n返回结果
+  logAspect -> logAspect : handleLog(e=null, jsonResult)
+else 抛出异常
+  ctrl --> logAspect : @AfterThrowing\n异常对象
+  logAspect -> logAspect : handleLog(e=ex, jsonResult=null)
+end
+
+== 构建操作日志 ==
+logAspect -> secUtil : getLoginUser()
+secUtil --> logAspect : LoginUser(用户名, 部门)
+logAspect -> request : 获取URI/IP
+request --> logAspect : /nursing/healthAssessment
+
+logAspect -> logAspect : 构建SysOperLog对象
+note right
+  日志包含:
+  - title: 健康评估
+  - businessType: INSERT
+  - method: 类名.方法名
+  - requestMethod: POST
+  - operName: 当前用户
+  - deptName: 所属部门
+  - operUrl: /nursing/healthAssessment
+  - operIp: 192.168.x.x
+  - operParam: 请求参数(JSON)
+  - jsonResult: 响应结果
+  - status: 0=成功/1=失败
+  - errorMsg: 异常信息
+  - operTime: 开始时间
+  - costTime: 耗时(ms)
+end note
+
+== 异步持久化 ==
+logAspect -> async : execute(recordOper 任务)
+async -> factory : recordOper(operLog)
+factory -> factory : AddressUtils\n解析IP地理位置
+factory --> pool : TimerTask提交
+pool -> logSvc : insertOperlog(operLog)
+logSvc -> db : INSERT INTO sys_oper_log
+db --> logSvc : OK
+logSvc --> pool : 完成
+
+logAspect -> logAspect : TIME_THREADLOCAL.remove()\nfinally清理
+
+@enduml

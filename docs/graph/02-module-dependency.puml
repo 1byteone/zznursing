@@ -1,0 +1,112 @@
+@startuml
+title 智颐养老系统 - 模块依赖关系图
+
+skinparam package {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontColor #191970
+  FontSize 14
+  FontStyle bold
+}
+
+skinparam rectangle {
+  BackgroundColor #E6E6FA
+  BorderColor #483D8B
+}
+
+package "zzyl-admin\n(Web入口)" as admin #FFE4E1 {
+  rectangle "Controller层" as controller
+  rectangle "SpringBootApplication" as main
+  rectangle "application.yml" as config
+}
+
+package "zzyl-framework\n(核心框架)" as framework #FFF0F5 {
+  rectangle "SecurityConfig" as security
+  rectangle "JwtAuthFilter" as jwt
+  rectangle "LogAspect" as logAspect
+  rectangle "RateLimiterAspect" as rateLimit
+  rectangle "DataScopeAspect" as dataScope
+  rectangle "DynamicDataSource" as ds
+  rectangle "RedisConfig" as redisConf
+  rectangle "ThreadPoolConfig" as threadPool
+  rectangle "MemberInterceptor" as memberInt
+}
+
+package "zzyl-system\n(系统管理)" as system #F5FFFA {
+  rectangle "SysUserService" as userSvc
+  rectangle "SysRoleService" as roleSvc
+  rectangle "SysMenuService" as menuSvc
+  rectangle "SysDeptService" as deptSvc
+  rectangle "SysDictService" as dictSvc
+  rectangle "SysConfigService" as cfgSvc
+  rectangle "SysNoticeService" as noticeSvc
+  rectangle "SysOperLogService" as logSvc
+}
+
+package "zzyl-nursing-platform\n(护理业务)" as nursing #FFFACD {
+  rectangle "CheckInService" as checkinSvc
+  rectangle "ElderService" as elderSvc
+  rectangle "RoomService" as roomSvc
+  rectangle "BedService" as bedSvc
+  rectangle "DeviceService" as deviceSvc
+  rectangle "ContractService" as contractSvc
+  rectangle "HealthAssessmentService" as healthSvc
+  rectangle "NursingLevelService" as levelSvc
+  rectangle "NursingPlanService" as planSvc
+  rectangle "WechatService" as wechatSvc
+  rectangle "AmqpClient" as amqpJob
+  rectangle "FamilyMemberService" as familySvc
+}
+
+package "zzyl-common\n(公共工具)" as common #F0FFFF {
+  rectangle "BaseEntity" as baseEntity
+  rectangle "AjaxResult" as result
+  rectangle "RedisCache" as redisUtil
+  rectangle "ExcelUtil" as excel
+  rectangle "SecurityUtils" as secUtil
+  rectangle "StringUtils" as strUtil
+  rectangle "DateUtils" as dateUtil
+  rectangle "BaiduAI" as aiInvoker
+}
+
+package "zzyl-quartz\n(定时任务)" as quartz #F5F5DC {
+  rectangle "SysJobService" as jobSvc
+}
+
+package "zzyl-oss\n(对象存储)" as oss #FFEFD5 {
+  rectangle "AliyunOSSOperator" as ossOp
+}
+
+admin --> framework : 依赖
+admin --> system : 依赖
+admin --> nursing : 依赖
+admin --> quartz : 依赖
+admin --> oss : 依赖
+
+framework --> common : 依赖
+system --> common : 依赖
+nursing --> framework : 依赖
+nursing --> common : 依赖
+nursing --> oss : 依赖
+quartz --> common : 依赖
+
+note right of admin
+  模块职责:
+  1. 系统入口(端口8080)
+  2. Controller定义
+  3. 配置聚合
+  4. 部署入口
+end note
+
+note right of nursing
+  核心业务模块:
+  1. 老人入住-退住管理
+  2. 房间/床位管理
+  3. 护理等级/计划/项目
+  4. IoT设备接入
+  5. 健康评估(AI)
+  6. 合同管理
+  7. 微信小程序登录
+end note
+
+@enduml

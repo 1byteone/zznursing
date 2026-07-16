@@ -362,4 +362,35 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
             throw new BaseException("删除本地设备信息失败");
         }
     }
+
+    /**
+     * 查询产品详情
+     * @param productKey
+     * @return
+     */
+    @Override
+    public AjaxResult queryProduct(String productKey) {
+        //参数校验
+        if(ObjectUtil.isEmpty(productKey)){
+            throw new BaseException("参数错误,请输入正确的参数");
+        }
+        //调用华为云IOT平台接口
+        ShowProductRequest request = new ShowProductRequest();
+        request.withProductId(productKey);
+        ShowProductResponse response ;
+
+        try{
+            response = iotDAClient.showProduct(request);
+        } catch (Exception e) {
+            throw new BaseException("查询产品详情失败");
+        }
+
+        //判断是否存在服务数据
+        List<ServiceCapability> serviceCapabilities = response.getServiceCapabilities();
+        if(CollUtil.isEmpty(serviceCapabilities)){
+            return AjaxResult.success(Collections.emptyList());
+        }
+
+        return AjaxResult.success(serviceCapabilities);
+    }
 }

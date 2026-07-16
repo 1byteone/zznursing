@@ -1,0 +1,87 @@
+@startuml
+title 智颐养老系统 - MyBatis-Plus拦截器链
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "MybatisPlusConfig\n@Configuration" as config #FFE4E1
+
+rectangle "MybatisPlusInterceptor\n拦截器链" as chain {
+  rectangle "PaginationInnerInterceptor\n物理分页拦截器" as pagination #FFFACD
+  rectangle "OptimisticLockerInnerInterceptor\n乐观锁拦截器" as locker #E0FFFF
+  rectangle "BlockAttackInnerInterceptor\n防全表操作拦截器" as blockAttack #F5FFFA
+}
+
+rectangle "MyMetaObjectHandler\n自动字段填充" as metaHandler #FFEFD5
+
+rectangle "BaseEntity\n公共父类" as baseEntity {
+  rectangle "@TableField(fill=INSERT)\ncreateBy" as cb
+  rectangle "@TableField(fill=INSERT)\ncreateTime" as ct
+  rectangle "@TableField(fill=UPDATE)\nupdateBy" as ub
+  rectangle "@TableField(fill=UPDATE)\nupdateTime" as ut
+}
+
+rectangle "Mapper接口\n(BaseMapper<T>)" as mapper
+
+rectangle "YAML配置" as yaml {
+  rectangle "typeAliasesPackage:\ncom.zzyl.**.domain" as alias
+  rectangle "mapperLocations:\nclasspath*:mapper/**/*Mapper.xml" as mappers
+  rectangle "id-type: auto\n自增主键" as idType
+  rectangle "map-underscore-to-camel\n驼峰命名映射" as camel
+}
+
+rectangle "PageHelper\n独立分页插件" as pageHelper {
+  rectangle "helperDialect: mysql" as dialect
+  rectangle "supportMethodsArguments:\ntrue" as sma
+}
+
+config --> chain : @Bean mybatisPlusInterceptor()
+config --> metaHandler : @Component
+
+chain --> pagination : 注册
+chain --> locker : 注册
+chain --> blockAttack : 注册
+
+pagination -> pagination : setDbType(MYSQL)\nsetMaxLimit(-1) 不限
+
+locker -> locker : 配合@Version注解
+blockAttack -> blockAttack : 防止无where\nupdate/delete
+
+metaHandler --> baseEntity : 自动填充字段
+baseEntity --> cb
+baseEntity --> ct
+baseEntity --> ub
+baseEntity --> ut
+
+mapper --> chain : 执行SQL时被拦截
+mapper --> metaHandler : insert/update时触发
+
+yaml --> config : 读取配置
+pageHelper --> pagination : 并存但不冲突
+
+note right of metaHandler
+  insertFill:
+  createTime = new Date()
+  createBy = 当前用户ID
+  (排除/member/**请求)
+  
+  updateFill:
+  updateTime = new Date()
+  updateBy = 当前用户ID
+  (排除/member/**请求)
+end note
+
+note right of blockAttack
+  安全防护:
+  拦截 UPDATE/DELETE
+  不带WHERE条件
+  的SQL语句
+  防止误操作导致
+  全表数据丢失
+end note
+
+@enduml

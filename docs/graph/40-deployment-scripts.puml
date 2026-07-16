@@ -1,0 +1,89 @@
+@startuml
+title 智颐养老系统 - 部署脚本架构
+
+skinparam rectangle {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "ry.sh (Linux)" as sh #E0FFFF
+rectangle "ry.bat (Windows)" as bat #FFFACD
+
+rectangle "JVM配置" as jvm {
+  rectangle "堆内存\n-Xms512m -Xmx1024m" as heap
+  rectangle "元空间\nMetaspaceSize=128m\nMaxMetaspaceSize=512m" as meta
+  rectangle "GC策略\nUseParallelGC\nUseParallelOldGC" as gc
+  rectangle "新生代\nNewRatio=1\nSurvivorRatio=30" as young
+  rectangle "OOM处理\nHeapDumpOnOOM" as oom
+  rectangle "时区\nAsia/Shanghai" as tz
+}
+
+rectangle "应用管理命令" as cmds {
+  rectangle "start\n启动应用" as start
+  rectangle "stop\n停止应用" as stop
+  rectangle "restart\n重启应用" as restart
+  rectangle "status\n查看状态" as status
+}
+
+rectangle "启动方式对比" as compare {
+  rectangle "Linux: nohup &\n后台运行" as linuxStart
+  rectangle "Windows: javaw\n静默启动" as winStart
+}
+
+rectangle "停止方式对比" as stopCompare {
+  rectangle "Linux: kill -TERM\n优雅关闭\n等待进程退出" as linuxStop
+  rectangle "Windows: taskkill /f\n强制终止" as winStop
+}
+
+rectangle "Docker部署" as docker {
+  rectangle "Dockerfile" as dockerfile
+  rectangle "openjdk:11.0-jre-buster" as base
+  rectangle "EXPOSE 8080" as expose
+  rectangle "java -jar /app.jar" as entry
+  rectangle "deploy.sh\nDocker容器管理" as deploy
+}
+
+sh --> jvm : 使用
+bat --> jvm : 使用
+
+sh --> cmds : case \$1
+bat --> cmds : %1
+sh --> compare : nohup方式
+bat --> compare : javaw方式
+sh --> stopCompare : kill -TERM
+bat --> stopCompare : taskkill /f
+
+deploy --> base : 基础镜像
+deploy --> expose : 端口
+deploy --> entry : 入口
+
+note right of jvm
+  JVM调优要点:
+  - 总堆1GB(开发环境)
+  - 并行GC降低GC停顿
+  - 年轻代:老年代=1:1
+  - Survivor: Eden=30:30
+  - OOM自动dump堆栈
+end note
+
+note right of sh
+  Linux部署命令:
+  # 启动
+  ./ry.sh start
+  
+  # 停止 (优雅)
+  ./ry.sh stop
+  
+  # 重启
+  ./ry.sh restart
+  
+  # 查看状态
+  ./ry.sh status
+  
+  日志重定向:
+  > /dev/null 2>&1 &
+end note
+
+@enduml

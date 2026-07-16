@@ -1,0 +1,103 @@
+@startuml
+title 智颐养老系统 - 定时任务模块架构图
+
+skinparam rectangle {
+  BackgroundColor #F5FFFA
+  BorderColor #3CB371
+  FontSize 11
+  RoundCorner 8
+}
+
+package "表现层" as ctrl {
+  rectangle "SysJobController\n/monitor/job" as jobCtrl
+  rectangle "SysJobLogController\n/monitor/jobLog" as logCtrl
+}
+
+package "服务层" as svc {
+  rectangle "ISysJobService" as jobSvc
+  rectangle "ISysJobLogService" as logSvc
+  rectangle "SysJobServiceImpl" as jobSvcImpl
+  rectangle "SysJobLogServiceImpl" as logSvcImpl
+}
+
+package "Quartz调度引擎" as quartz {
+  rectangle "Scheduler" as scheduler
+  rectangle "JobDetail" as jobDetail
+  rectangle "CronTrigger" as trigger
+  rectangle "JobExecutionContext" as ctx
+}
+
+package "任务执行" as exec {
+  rectangle "AbstractQuartzJob" as abstractJob
+  rectangle "QuartzJobExecution\n(允许并发)" as concurrent
+  rectangle "QuartzDisallowConcurrentExecution\n(禁止并发)" as nonConcurrent
+}
+
+package "工具类" as util {
+  rectangle "ScheduleUtils\n创建/管理调度任务" as scheduleUtil
+  rectangle "CronUtils\nCron表达式验证" as cronUtil
+  rectangle "JobInvokeUtil\n反射调用目标方法" as invokeUtil
+}
+
+package "数据层" as data {
+  rectangle "SysJobMapper" as jobMapper
+  rectangle "SysJobLogMapper" as logMapper
+  database "sys_job" as jobDb
+  database "sys_job_log" as logDb
+}
+
+package "业务定时任务" as tasks {
+  rectangle "RyTask\n(示例任务)" as ryTask
+  rectangle "ContractTask\n合同状态更新" as contractTask
+  rectangle "HelloTask\n(示例)" as helloTask
+}
+
+ctrl --> svc : 调用
+svc --> data : 读写
+jobSvcImpl --> scheduler : 调度管理
+jobSvcImpl --> scheduleUtil : 创建任务
+scheduleUtil --> scheduler : JobDetail + CronTrigger
+
+scheduler --> abstractJob : 触发执行
+abstractJob <|-- concurrent : 继承
+abstractJob <|-- nonConcurrent : 继承
+concurrent --> invokeUtil : 反射调用
+nonConcurrent --> invokeUtil : 反射调用
+invokeUtil --> tasks : 调用目标Bean方法
+
+abstractJob --> logSvcImpl : 记录执行日志
+logSvcImpl --> logMapper : 写入
+
+data <--> util : 验证Cron\n白名单检查
+
+note right of scheduler
+  @PostConstruct init()
+  启动时清空调度器
+  从数据库重新加载
+  所有已启用的Job
+end note
+
+note right of invokeUtil
+  调用目标格式:
+  ryTask.ryNoParams()
+  ryTask.ryParams('hello')
+  contractTask.updateContractStatus()
+  
+  支持:
+  - Spring Bean调用
+  - 全限定类名反射
+  - 参数类型自动解析
+end note
+
+note right of tasks
+  项目扩展定时任务:
+  
+  ContractTask:
+  定时检查合同到期状态
+  自动更新status=1->2
+  
+  HelloTask:
+  简单测试任务
+end note
+
+@enduml

@@ -1,0 +1,86 @@
+@startuml
+title 智颐养老系统 - 护理方案-等级-项目结构图
+
+skinparam rectangle {
+  BackgroundColor #F0FFF0
+  BorderColor #2E8B57
+  FontSize 12
+  RoundCorner 10
+}
+
+skinparam database {
+  BackgroundColor #F5F5DC
+  BorderColor #8B7355
+}
+
+rectangle "NursingPlan\n护理方案" as plan {
+}
+
+rectangle "NursingLevel\n护理等级" as level {
+}
+
+rectangle "NursingProject\n护理项目" as project {
+}
+
+rectangle "NursingProjectPlan\n方案-项目关联" as planProject {
+}
+
+database "sys_nursing_plan" as planTb
+database "sys_nursing_level" as levelTb
+database "sys_nursing_project" as projectTb
+database "sys_nursing_project_plan" as planProjectTb
+
+planTb <-- plan : 映射
+levelTb <-- level : 映射
+projectTb <-- project : 映射
+planProjectTb <-- planProject : 映射
+
+plan "1" -- "N" level : 一个方案对应多个等级
+plan "1" -- "N" planProject : 一个方案包含多个项目
+project "1" -- "N" planProject : 一个项目可被多个方案引用
+
+note right of plan
+  护理方案:
+  - 基础护理方案
+  - 特级护理方案
+  - 康复护理方案
+end note
+
+note right of level
+  护理等级(关联方案):
+  - 能力完好(planId)
+  - 轻度失能(planId)
+  - 中度失能(planId)
+  - 重度失能(planId)
+  - 特级护理(planId)
+  
+  每个等级有不同收费标准
+end note
+
+note right of planProject
+  项目执行配置:
+  - executeTime: 执行时间
+  - executeCycle: 0=天,1=周,2=月
+  - executeFrequency: 执行频率
+end note
+
+note right of project
+  护理项目:
+  - 翻身拍背 5元/次
+  - 口腔护理 10元/次
+  - 鼻饲护理 15元/次
+  - 血压监测 5元/次
+  - 血糖监测 8元/次
+  - 洗澡护理 30元/次
+  - 压疮护理 20元/次
+  - 康复训练 50元/次
+end note
+
+note bottom of planProject
+  planId + projectId 唯一
+  一个方案可以包含
+  多个护理项目
+  并配置执行时间/周期
+end note
+
+@enduml

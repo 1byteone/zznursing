@@ -1,0 +1,93 @@
+@startuml
+title 智颐养老系统 - 动态路由生成时序图
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+actor "用户" as user
+participant "前端\npermission.js" as perm
+participant "api/menu.js" as api
+participant "SysMenuController" as ctrl
+participant "SysMenuServiceImpl" as svc
+participant "SysMenuMapper" as mapper
+participant "MySQL" as db
+
+== 登录后加载路由 ==
+user -> user : 登录成功
+
+user -> perm : GenerateRoutes()
+perm -> api : getRouters()
+
+api -> ctrl : GET /getRouters
+ctrl -> svc : selectMenuTreeByUserId()
+svc -> mapper : selectMenuTreeByUserId()
+
+mapper -> db : 查询可用菜单
+note right
+  SELECT DISTINCT m.*
+  FROM sys_menu m
+  LEFT JOIN sys_role_menu rm
+  ON m.menu_id = rm.menu_id
+  LEFT JOIN sys_user_role ur
+  ON rm.role_id = ur.role_id
+  WHERE ur.user_id = #{userId}
+  AND m.status = 0
+  ORDER BY m.order_num
+end note
+
+db --> mapper : List<SysMenu>
+mapper --> svc : 菜单列表
+
+svc -> svc : buildMenus(menus)
+note right
+  构建RouterVo树:
+  1. 筛选顶级菜单
+     (parentId=0)
+  2. 递归构建子菜单
+  3. 设置component路径
+  4. 设置meta信息
+     (title, icon)
+  5. 标记外链/内链
+end note
+
+svc --> ctrl : List<RouterVo>
+ctrl --> api : JSON数组
+
+api --> perm : 路由配置
+
+== 前端处理 ==
+perm -> perm : filterAsyncRouter()
+note right
+  将后端返回的
+  component字符串转为
+  实际的Vue组件导入:
+  
+  'system/user/index'
+  → @/views/
+    system/user/index
+end note
+
+perm -> perm : 合并常量路由\n+ 动态路由
+perm -> router : router.addRoutes()
+router -> router : 挂载动态路由
+
+user -> user : 刷新菜单和视图
+
+note left of RouterVo
+  路由结构:
+  {
+    name: 'User',
+    path: '/system/user',
+    component: 'system/user/index',
+    meta: {
+      title: '用户管理',
+      icon: 'user'
+    },
+    children: [...]
+  }
+end note
+
+@enduml

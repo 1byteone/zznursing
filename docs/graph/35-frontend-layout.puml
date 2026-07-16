@@ -1,0 +1,97 @@
+@startuml
+title 智颐养老系统 - 前端布局组件结构图
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "index.vue\n主布局" as layout #FFE4E1
+
+rectangle "Sidebar\n侧边栏" as sidebar #FFFACD {
+  rectangle "Logo\n系统LOGO" as logo
+  rectangle "SidebarItem\n菜单项" as item {
+    rectangle "递归渲染\n子菜单" as subItem
+  }
+  rectangle "Link\n菜单链接" as link
+}
+
+rectangle "Navbar\n顶栏导航" as navbar #E0FFFF {
+  rectangle "Hamburger\n折叠按钮" as hamburger
+  rectangle "Breadcrumb\n面包屑" as breadcrumb
+  rectangle "HeaderSearch\n全局搜索" as search
+  rectangle "Screenfull\n全屏" as screenfull
+  rectangle "SizeSelect\n尺寸选择" as sizeSelect
+  rectangle "Avatar\n用户头像" as avatar
+}
+
+rectangle "TagsView\n标签页导航" as tagsView #F5FFFA {
+  rectangle "ScrollPane\n滚动容器" as scrollPane
+  rectangle "Tag标签" as tag
+  rectangle "ContextMenu\n右键菜单" as contextMenu
+}
+
+rectangle "AppMain\n主内容区" as appMain #FFF0F5 {
+  rectangle "router-view\n路由视图" as routerView
+  rectangle "IframeToggle\n内嵌iframe" as iframe
+}
+
+rectangle "Settings\n主题设置面板" as settings #FFEFD5 {
+  rectangle "主题颜色" as theme
+  rectangle "侧边栏风格" as sideTheme
+  rectangle "TagsView开关" as tagSwitch
+  rectangle "固定头部" as fixedH
+  rectangle "侧边栏Logo" as sideLogo
+}
+
+rectangle "父子关系" as relation {
+}
+
+layout --> sidebar : 左侧
+layout --> navbar : 顶部
+layout --> tagsView : 标签栏
+layout --> appMain : 主体
+layout --> settings : 右侧抽屉
+
+sidebar --> logo : 包含
+sidebar --> item : 包含
+item --> subItem : 递归
+item --> link : 跳转
+
+navbar --> hamburger : 包含
+navbar --> breadcrumb : 包含
+navbar --> search : 包含
+navbar --> screenfull : 包含
+navbar --> sizeSelect : 包含
+navbar --> avatar : 包含
+
+tagsView --> scrollPane : 包含
+tagsView --> tag : 标签
+tagsView --> contextMenu : 右键
+
+appMain --> routerView : 路由渲染
+appMain --> iframe : 内嵌页面
+
+settings --> theme : 设置项
+settings --> sideTheme
+settings --> tagSwitch
+settings --> fixedH
+settings --> sideLogo
+
+note right of layout
+  Vuex响应式:
+  sidebar.opened
+  sidebar.hide
+  device (mobile/desktop)
+  settings.theme
+  settings.tagsView
+  settings.fixedHeader
+  
+  移动端:
+  Sidebar作为抽屉
+  Drawer-bg遮罩层
+end note
+
+@enduml

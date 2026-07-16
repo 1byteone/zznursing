@@ -1,0 +1,81 @@
+@startuml
+title 智颐养老系统 - AI健康评估(体检报告解析)流程
+
+skinparam sequence {
+  ArrowColor #2E4D7B
+  ActorBorderColor #2E4D7B
+  LifeLineBorderColor #2E4D7B
+}
+
+participant "用户\n(Web/管理端)" as user
+participant "HealthAssessmentController" as ctrl
+participant "HealthAssessmentService" as svc
+participant "PDFUtil" as pdf
+participant "Redis\n(临时缓存)" as redis
+participant "AIModelInvoker\n(百度千帆)" as ai
+participant "数据库\nhealth_assessment" as db
+
+== 1. 上传体检报告PDF ==
+user -> ctrl : POST /nursing/healthAssessment/upload\n(file + idCardNo)
+ctrl -> svc : uploadReport(file, idCardNo)
+svc -> pdf : pdfToString(file)
+note right: 使用PDFBox解析PDF文本
+pdf --> svc : 体检报告文本内容
+svc -> redis : hset "healthReport" {idCardNo: text}
+note right: TTL = 24小时
+svc --> ctrl : 上传成功
+ctrl --> user : {msg: "上传成功"}
+
+== 2. 提交AI评估 ==
+user -> ctrl : POST /nursing/healthAssessment\n(elder姓名/性别/年龄/身份证号)
+ctrl -> svc : submitAssessment(dto)
+svc -> redis : hget "healthReport" {idCardNo}
+redis --> svc : 体检报告文本
+svc -> svc : 构造AI Prompt
+
+note right of svc
+  Prompt结构:
+  1. 系统角色: 资深全科医生
+  2. 用户信息: 年龄/性别
+  3. 体检报告全文
+  4. 要求输出JSON:
+     - healthIndex 健康指数
+     - riskLevel 风险等级
+     - riskDistribution 风险分布
+     - score 八大体统评分
+     - abnormalData 异常指标
+     - summary 综合建议
+end note
+
+svc -> ai : chatCompletion(prompt)
+note right: OpenAI兼容接口 → 百度千帆Ernie 5.0
+ai --> svc : 结构化JSON结果
+
+== 3. 解析与持久化 ==
+svc -> svc : 解析AI返回JSON
+note right
+  解析为:
+  HealthAssessment domain
+  healthIndex / riskLevel
+  RiskDistributionVo (%)
+  AbnormalDataVo (列表)
+  SystemScore (8大系统)
+  推荐护理等级
+end note
+
+svc -> svc : 根据分数推荐护理等级
+note right
+  ≥85 → 四级护理
+  ≥70 → 三级护理
+  ≥55 → 二级护理
+  ≥40 → 一级护理
+  <40 → 特级护理
+  是否建议入住
+end note
+
+svc -> db : insert health_assessment
+db --> svc : 记录ID
+svc --> ctrl : HealthAssessmentVo
+ctrl --> user : {healthIndex, riskLevel,\n系统评分, 异常数据,\n建议等}
+
+@enduml

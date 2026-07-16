@@ -1,0 +1,92 @@
+@startuml
+title 智颐养老系统 - 代码生成器架构图
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 8
+}
+
+rectangle "开发者" as dev
+
+rectangle "GenController\n/tool/gen" as ctrl #FFE4E1
+
+rectangle "IGenTableService" as tblSvc
+rectangle "IGenTableColumnService" as colSvc
+
+rectangle "GenTableMapper" as tblMapper
+rectangle "GenTableColumnMapper" as colMapper
+
+database "MySQL\nINFORMATION_SCHEMA" as dbSchema
+database "gen_table\ngen_table_column" as genDb
+
+rectangle "Velocity模板引擎" as velocity #FFFACD
+
+rectangle "模板文件\n(.vm)" as templates {
+  rectangle "domain.java.vm" as t1
+  rectangle "mapper.java.vm" as t2
+  rectangle "mapper.xml.vm" as t3
+  rectangle "service.java.vm" as t4
+  rectangle "serviceImpl.java.vm" as t5
+  rectangle "controller.java.vm" as t6
+  rectangle "sql.vm" as t7
+  rectangle "index.vue.vm" as t8
+  rectangle "api.js.vm" as t9
+}
+
+rectangle "生成产物" as output {
+  rectangle "Controller.java" as o1
+  rectangle "Service/Impl.java" as o2
+  rectangle "Mapper.java/XML" as o3
+  rectangle "Domain.java" as o4
+  rectangle "Vue页面" as o5
+  rectangle "API JS" as o6
+  rectangle "SQL脚本" as o7
+}
+
+dev --> ctrl : 1.选择表导入
+ctrl --> tblSvc : 2.importTableSave()
+tblSvc --> dbSchema : 3.查询表结构
+dbSchema --> tblSvc : 列信息/注释/类型
+tblSvc --> genDb : 4.保存配置
+tblSvc --> colSvc : 5.保存列配置
+
+dev --> ctrl : 6.编辑配置(字段/模板)
+ctrl --> tblSvc : 7.updateGenTable()
+tblSvc --> genDb : 保存修改
+
+dev --> ctrl : 8.预览/生成
+ctrl --> tblSvc : 9.previewCode()/generatorCode()
+
+tblSvc --> tblMapper : 10.读取配置
+tblMapper --> genDb : 查询表+列
+genDb --> tblMapper : 完整配置
+
+tblSvc --> velocity : 11.VelocityUtils.prepareContext()
+
+velocity --> templates : 12.加载VM模板
+note right of velocity
+  模板变量:
+  packageName
+  className
+  businessName
+  functionName
+  columns (列表)
+  permissions
+  dicts
+  pkColumn
+end note
+
+velocity --> output : 13.渲染生成代码
+
+note right of ctrl
+  关键API:
+  GET /preview/{id} - 代码预览
+  GET /download/{name} - 下载ZIP
+  GET /genCode/{name} - 生成到目录
+  GET /synchDb/{name} - 同步数据库
+  POST /importTable - 导入表
+end note
+
+@enduml

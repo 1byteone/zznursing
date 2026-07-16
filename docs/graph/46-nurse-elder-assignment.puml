@@ -1,0 +1,66 @@
+@startuml
+title 智颐养老系统 - 护士-老人关联分配流程
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #4682B4
+  FontSize 11
+}
+
+start
+:护理主管登录系统;
+
+if (选择按楼层查看?) then (是)
+  :FloorController.getAllFloorsWithNur();
+  note right: 获取所有楼层\n及对应护士
+  :展示楼层列表;
+  if (选择楼层?) then (是)
+    :FloorController.getRoomsWithNurByFloorId();
+    note right: 获取该楼层下\n所有房间及负责护士
+    :展示房间-护士关系;
+  else
+    stop
+  endif
+else (按房间查看)
+  :RoomController.getRoomsByFloorId();
+  :展示房间列表;
+endif
+
+:选择目标房间和床位;
+:查看当前床位上老人信息;
+
+:NursingElderController.setNursing();
+:NursingElderService.saveBatch(nursingElderList);
+
+:NursingElderDto包含;
+:elderId nurseId careLevel;
+
+:批量插入nursing_elder关联表;
+
+if (需要调整?) then (是)
+  :重新调用setNursing覆盖关联;
+else
+  :分配完成;
+endif
+
+:NursingElderController.list分页查询;
+:返回NursingElderVo\n老人姓名床号护士等级;
+:前端展示护理清单;
+
+stop
+
+note right
+  先删除该护士之前的
+  关联记录
+  再批量插入新的
+  全量替换模式
+  
+  一个护士可负责
+  多个老人
+  
+  一个老人
+  可关联多个护士
+  不同班次/不同服务
+end note
+
+@enduml

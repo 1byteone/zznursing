@@ -1,0 +1,86 @@
+@startuml
+title 智颐养老系统 - 安全过滤链架构图
+
+skinparam component {
+  BackgroundColor #FFF0F5
+  BorderColor #8B008B
+  FontSize 11
+  RoundCorner 8
+}
+
+rectangle "HTTP Request" as req
+
+rectangle "CorsFilter" as cors #FFE4E1
+
+rectangle "RepeatableFilter\n可重复读请求体" as repeatable #FFFACD
+
+rectangle "XssFilter\nXSS攻击防护" as xss #F0FFF0
+
+rectangle "Security Filter Chain" as securityChain #F5F5FF
+
+rectangle "JwtAuthenticationTokenFilter\nJWT令牌验证" as jwt #E6E6FA
+
+rectangle "UsernamePassword\nAuthenticationFilter" as basic
+
+rectangle "LogoutFilter" as logout
+
+rectangle "AuthenticationEntryPoint\n未认证处理(401)" as entry
+
+rectangle "LogoutSuccessHandler\n退出成功处理" as logoutHandler
+
+rectangle "MethodSecurity\n@PreAuthorize" as methodSec
+
+rectangle "Controller" as ctrl
+
+rectangle "MemberInterceptor\n微信小程序认证" as member #E0FFFF
+
+rectangle "RepeatSubmitInterceptor\n防重复提交" as repeatSubmit #FFEFD5
+
+rectangle "MyMetaObjectHandler\n自动填充审计字段" as audit
+
+req --> cors : 1
+cors --> repeatable : 2
+repeatable --> xss : 3
+xss --> securityChain : 4
+
+securityChain --> jwt : 4.1
+securityChain --> basic : 4.2
+securityChain --> logout : 4.3
+securityChain --> entry : 异常
+securityChain --> logoutHandler : 退出
+
+jwt --> methodSec : 令牌有效
+methodSec --> ctrl : 权限校验通过
+
+ctrl <.. member : /member/** 路径
+ctrl <.. repeatSubmit : 防重复提交
+ctrl <.. audit : 审计字段填充
+
+note left of cors
+  允许跨域
+  所有来源/头/方法
+end note
+
+note left of xss
+  过滤 /system/*
+  /monitor/* /tool/*
+  URL中的HTML标签
+end note
+
+note right of jwt
+  1. 从Header提取
+     "Bearer {token}"
+  2. TokenService解析JWT
+  3. 从Redis获取LoginUser
+  4. 自动续期(<20min)
+  5. 设置SecurityContext
+end note
+
+note right of methodSec
+  @PreAuthorize
+  (@ss.hasPermi('xx'))
+  基于权限字符串
+  细粒度控制
+end note
+
+@enduml

@@ -108,4 +108,11 @@ public interface IDeviceService extends IService<Device>
      * @param iotId
      */
     void customDeleteDeviceById(String iotId);
+
+    /**
+     * 查询产品详情
+     * @param productKey
+     * @return
+     */
+    AjaxResult queryProduct(String productKey);
 }

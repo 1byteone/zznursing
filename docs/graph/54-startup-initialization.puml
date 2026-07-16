@@ -1,0 +1,86 @@
+@startuml
+title 智颐养老系统 - 启动初始化预热流程
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #483D8B
+  FontSize 11
+}
+
+start
+:Spring Boot应用启动;
+
+:ApplicationContext初始化;
+:所有Bean完成依赖注入;
+
+partition "阶段1: @PostConstruct 预热" {
+  if (SysDictTypeServiceImpl.init) then
+    :loadingDictCache();
+    :查询sys_dict_data\nWHERE status=0;
+    :按dictType分组 按dictSort排序;
+    :setCacheObject到Redis\nsys_dict:{dictType}=JSONArray;
+    note right: 启用字典预加载到Redis
+  endif
+
+  if (SysConfigServiceImpl.init) then
+    :loadingConfigCache();
+    :查询所有sys_config;
+    :循环setCacheObject\nsys_config:{key}=value;
+    note right: 配置参数预加载
+  endif
+
+  if (SysJobServiceImpl.init) then
+    :scheduler.clear();
+    :查询所有sys_job;
+    :循环createScheduleJob();
+    note right: 清空Quartz调度器\n重新注册所有任务
+  endif
+}
+
+partition "阶段2: ApplicationRunner" {
+  :AmqpClient.run() 启动;
+  :读取huaWeiIotConfig配置;
+  
+  while (循环connectionCount次)
+    :创建JMS Connection;
+    :设置SSL连接 (AMQPS);
+    :创建Session;
+    :创建MessageConsumer;
+    :注册MessageListener;
+    note right: 配置failover重连\nreconnectDelay=10s\nmaxReconnectDelay=300s
+  endwhile
+
+  :线程池等待处理消息;
+}
+
+partition "阶段3: 首次请求懒加载" {
+  :用户首次调用API;
+  :查询Redis缓存;
+  if (缓存未命中?) then (是)
+    :回查数据库;
+    :写入Redis缓存;
+    :返回结果;
+  else
+    :直接返回;
+  endif
+}
+
+:应用就绪 对外服务;
+stop
+
+note right
+  华为云IoT AMQP客户端:
+  - 使用Qpid JMS 0.61.0
+  - AMQP 1.0 over SSL
+  - failover: (amqps://...)
+  - 连接地址通过配置指定
+  - 从指定队列消费消息
+  - 解析设备上报数据
+  - 存入device_data表
+  
+  注册MessageListener:
+  ExecutorService线程池
+  异步处理消息
+end note
+
+@enduml

@@ -1,0 +1,126 @@
+@startuml
+title 智颐养老系统 - 权限管理数据模型(RBAC)
+
+skinparam class {
+  BackgroundColor #FFF8F0
+  BorderColor #D2691E
+  FontSize 11
+}
+
+class SysUser {
+  + Long userId
+  + Long deptId
+  + String userName
+  + String nickName
+  + String password
+  + String phonenumber
+  + String sex
+  + String status
+  + String delFlag
+  + Date loginDate
+}
+
+class SysRole {
+  + Long roleId
+  + String roleName
+  + String roleKey
+  + Integer roleSort
+  + String dataScope
+  + String status
+  + String delFlag
+  + Set<String> permissions
+}
+
+class SysMenu {
+  + Long menuId
+  + String menuName
+  + Long parentId
+  + Integer orderNum
+  + String path
+  + String component
+  + String menuType
+  + String visible
+  + String status
+  + String perms
+  + String icon
+  + List<SysMenu> children
+}
+
+class SysDept {
+  + Long deptId
+  + Long parentId
+  + String ancestors
+  + String deptName
+  + Integer orderNum
+  + String leader
+  + String status
+  + List<SysDept> children
+}
+
+class SysPost {
+  + Long postId
+  + String postCode
+  + String postName
+  + Integer postSort
+  + String status
+}
+
+class SysUserRole {
+  + Long userId
+  + Long roleId
+}
+
+class SysRoleMenu {
+  + Long roleId
+  + Long menuId
+}
+
+class SysRoleDept {
+  + Long roleId
+  + Long deptId
+}
+
+class SysUserPost {
+  + Long userId
+  + Long postId
+}
+
+SysUser "N" -- "N" SysRole : 通过 SysUserRole
+SysUser "N" -- "N" SysPost : 通过 SysUserPost
+SysRole "N" -- "N" SysMenu : 通过 SysRoleMenu
+SysRole "N" -- "N" SysDept : 通过 SysRoleDept\n(数据权限)
+SysDept "1" -- "N" SysUser : 所属部门
+
+note right of SysRole
+  dataScope 数据权限范围:
+  1=仅本人
+  2=本部门
+  3=本部门及以下
+  4=自定义
+  5=全部数据
+end note
+
+note right of SysMenu
+  menuType 类型:
+  M=目录
+  C=菜单
+  F=按钮
+
+  perms 权限标识:
+  system:user:list
+  system:user:add
+  nursing:elder:list
+  monitor:job:list
+end note
+
+note left of SysDept
+  部门树形结构:
+  - 中州养老(根节点)
+    - 后勤部
+    - 护理部(nursingId=201)
+      - 一楼护理组
+      - 二楼护理组
+    - 市场部
+end note
+
+@enduml

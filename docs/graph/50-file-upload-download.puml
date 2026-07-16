@@ -1,0 +1,103 @@
+@startuml
+title 智颐养老系统 - 通用文件上传下载流程
+
+skinparam activity {
+  BackgroundColor #F8F8FF
+  BorderColor #4682B4
+  FontSize 11
+}
+
+start
+
+if (操作类型?) then (单文件上传)
+
+  :POST /common/upload;
+  :接收MultipartFile;
+  
+  if (文件大小 > 50MB?) then (是)
+    :抛出FileSizeLimitExceededException;
+    stop
+  endif
+  if (文件名 > 100字符?) then (是)
+    :抛出FileNameLengthLimitExceededException;
+    stop
+  endif
+  if (扩展名不允许?) then (是)
+    :抛出InvalidExtensionException;
+    stop
+  endif
+  
+  :AliyunOSSOperator.upload();
+  note right: 上传到阿里云OSS\n路径: bucket/yyyy/MM/UUID.ext
+  :返回OSS完整URL;
+  
+  --> 响应
+
+elseif (多文件上传)
+
+  :POST /common/uploads;
+  :接收List<MultipartFile>;
+  :遍历文件列表;
+
+  while (文件未处理完)
+    :FileUploadUtils.upload() 本地存储;
+    note right: 路径: {profile}/upload/yyyymmdd/name_seq.ext
+    :拼接本地访问URL;
+  endwhile
+
+  :结果逗号分隔拼接;
+  --> 响应
+
+elseif (文件下载)
+
+  :GET /common/download?fileName=X&delete=Y;
+  :FileUtils.checkAllowDownload(fileName);
+  if (文件名非法?) then (是)
+    :抛出异常;
+    stop
+  endif
+  
+  :提取真实文件名;
+  :RuoYiConfig.getDownloadPath() + fileName;
+  :response.setContentType(octet-stream);
+  :FileUtils.setAttachmentResponseHeader;
+  :FileUtils.writeBytes → response输出流;
+  
+  if (delete=true?) then (是)
+    :FileUtils.deleteFile 删除;
+  endif
+  
+  --> 响应
+
+elseif (资源下载)
+
+  :GET /common/download/resource;
+  :FileUtils.checkAllowDownload(resource);
+  if (资源非法?) then (是)
+    :抛出异常;
+    stop
+  endif
+  
+  :RuoYiConfig.getProfile() + resource;
+  :写入response输出流;
+  --> 响应
+
+endif
+
+stop
+
+note right
+  文件存储配置:
+  profile 基础目录
+  getImportPath 导入
+  getAvatarPath 头像
+  getDownloadPath 下载
+  getUploadPath 上传
+  
+  安全限制:
+  最大50MB
+  文件名最长100字符
+  白名单扩展名
+end note
+
+@enduml

@@ -1,0 +1,111 @@
+@startuml
+title 智颐养老系统 - IoT报警规则引擎
+
+skinparam rectangle {
+  BackgroundColor #F0F8FF
+  BorderColor #4682B4
+  FontSize 11
+  RoundCorner 6
+}
+
+rectangle "报警规则管理" as ruleMgmt #FFE4E1
+
+rectangle "AlertRule\n实体模型" as ruleModel {
+  rectangle "alertType\n0=老人异常 1=设备异常" as alertType
+  rectangle "productId / moduleId / functionId\n绑定额定设备属性" as ids
+  rectangle "operator: > < =" as operator
+  rectangle "value: 阈值" as threshold
+  rectangle "duration: 持续周期数" as duration
+  rectangle "alertEffectivePeriod\n生效时段(如08:00-18:00)" as period
+  rectangle "alertSilentPeriod\n静默时长(分钟)" as silence
+  rectangle "status: 0=禁用 1=启用" as status
+}
+
+rectangle "AlertRuleController" as ctrl #FFFACD {
+  rectangle "分页查询列表" as list
+  rectangle "创建/更新规则" as save
+  rectangle "启用/禁用" as toggle
+  rectangle "删除规则" as delete
+}
+
+rectangle "前置条件" as input {
+  rectangle "IoT设备\n上报实时数据" as deviceData
+  rectangle "设备数据表\ndevice_data" as dataStore
+}
+
+rectangle "规则引擎处理" as engine {
+  rectangle "加载启用的规则" as loadRules
+  rectangle "匹配设备属性" as matchAttr
+  rectangle "比较阈值" as compare
+  rectangle "检查持续周期" as checkDuration
+  rectangle "检查生效时段" as checkPeriod
+  rectangle "检查静默期" as checkSilence
+}
+
+rectangle "报警输出" as output {
+  rectangle "生成报警记录" as record
+  rectangle "TODO: 通知推送" as notify
+}
+
+rectangle "数据流" as flow {
+  rectangle "AMQP消费者\n实时接收" as amqp
+  rectangle "定时任务扫描\n周期性检测" as cron
+}
+
+ruleMgmt --> ctrl : 管理操作
+ctrl --> ruleModel : CRUD
+ruleModel --> engine : 配置规则
+
+flow --> input : 数据来源
+input --> engine : 触发规则校验
+
+engine --> loadRules : 1
+engine --> matchAttr : 2
+engine --> compare : 3
+engine --> checkDuration : 4
+engine --> checkPeriod : 5
+engine --> checkSilence : 6
+
+engine --> output : 触发报警
+output --> record : 持久化
+
+note right of engine
+  规则评估流程:
+  
+  1. 查询status=1
+     且匹配设备product
+     
+  2. 检查上报属性
+     是否匹配functionId
+     
+  3. 比较上报值
+     与threshold
+     使用operator
+     
+  4. 连续duration次
+     都触发才算报警
+     
+  5. 当前时间是否在
+     alertEffectivePeriod内
+     
+  6. 距上次报警是否超过
+     alertSilentPeriod
+     
+  全部通过→生成报警
+end note
+
+note right of flow
+  数据接入方式:
+  
+  AMQP消费者:
+  通过华为云IoTDA
+  AMQP 1.0协议
+  实时接收设备数据
+  
+  定时扫描:
+  由Quartz任务
+  周期性查询device_data
+  进行规则匹配
+end note
+
+@enduml

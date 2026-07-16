@@ -1,0 +1,92 @@
+@startuml
+title 智颐养老系统 - 部署架构图
+
+skinparam node {
+  BackgroundColor #F0F8FF
+  BorderColor #2E4D7B
+  FontSize 12
+}
+
+skinparam database {
+  BackgroundColor #F5F5DC
+  BorderColor #8B7355
+  FontSize 12
+}
+
+node "负载均衡" as lb {
+  [Nginx] as nginx
+}
+
+node "应用服务器" as appServer {
+  [Java 11\nSpring Boot 2.5.15] as app1
+  [Java 11\nSpring Boot 2.5.15] as app2
+  note right of app1
+    多实例部署
+    水平扩展
+  end note
+}
+
+node "缓存服务器" as cacheNode {
+  database "Redis 7\n主从集群" as redis
+}
+
+node "数据库服务器" as dbNode {
+  database "MySQL 8\n主库" as master
+  database "MySQL 8\n从库" as slave
+  master <-- slave : 主从复制
+}
+
+node "阿里云OSS" as oss {
+  file "图片存储" as imgStore
+  file "合同文件" as contractStore
+  file "体检报告" as reportStore
+}
+
+node "华为云IoT" as iot {
+  component "IoTDA\n设备接入" as iotda
+  component "AMQP\n消息队列" as amqp
+}
+
+node "百度千帆" as ai {
+  component "AI大模型\nErnie 5.0" as ernie
+}
+
+node "微信服务端" as wechatSvr {
+  component "微信登录API" as wxLogin
+  component "手机号API" as wxPhone
+}
+
+node "开发者/运维" as dev {
+  component "Druid\n连接池监控" as druid
+  component "Swagger\nAPI文档" as swagger
+}
+
+nginx --> app1
+nginx --> app2
+
+app1 --> redis : 缓存读写
+app2 --> redis
+
+app1 --> master : 读写
+app1 --> slave : 读
+app2 --> master
+app2 --> slave
+
+app1 --> oss : 文件上传/下载
+app2 --> oss
+
+app1 --> iotda : SDK调用
+app2 --> iotda
+iotda --> app1 : AMQP推送
+iotda --> app2
+
+app1 --> ernie : AI评估\n(OpenAI兼容API)
+app2 --> ernie
+
+app1 --> wxLogin : 微信登录
+app1 --> wxPhone : 手机号获取
+
+app1 --> druid : 内置
+app1 --> swagger : 内置
+
+@enduml
