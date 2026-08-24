@@ -206,14 +206,14 @@ dept:
 # 百度千帆大模型配置
 baidu:
   qianfan:
-    apiKey: bce-v3/ALTAK-e4khnEVx1fiW9FApX4PN3/b974bc00317dceef49c2cb814d66b5952e3c6b6f
+    apiKey: YOUR_API_KEY
     baseUrl: https://qianfan.baidubce.com/v2/
     model: ernie-5.0
 
 # 微信小程序配置
 wechat:
-  appId: wx8359fa91908675d8
-  appSecret: ede7b63201bf2986b43dfd7103dd5d56
+  appId: YOUR_APP_ID
+  appSecret: YOUR_APP_SCREAT
 
 huaweicloud:
   ak: HPUACHEBEX6LKUT9YFVG
@@ -224,6 +224,6 @@ huaweicloud:
   projectId: ddbdfc514d38476b9fb15787c49f97c5
   #amqp相关配置 下一章课程接收设备数据使用
   host: 2ad0f09f33.st1.iotda-app.cn-north-4.myhuaweicloud.com
-  accessKey: 9TwHXyNU
-  accessCode: Hrkz1haVDvo1icaROm6rxXSZvmLlSwiq
+  accessKey: YOUR_ACCESS_KEY
+  accessCode: YOUR_ACCESS_CODE
   queueName: DefaultQueue   #默认无需改动
