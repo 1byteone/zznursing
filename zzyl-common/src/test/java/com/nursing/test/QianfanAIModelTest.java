@@ -9,7 +9,7 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams;
 public class QianfanAIModelTest {
     public static void main(String[] args) {
         OpenAIClient client = OpenAIOkHttpClient.builder()
-                .apiKey("bce-v3/ALTAK-e4khnEVx1fiW9FApX4PN3/b974bc00317dceef49c2cb814d66b5952e3c6b6f") //将your_APIKey替换为真实值，如何获取API Key请查看https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Um2wxbaps#步骤二-获取api-key
+                .apiKey("YOUR_API_KEY") //将your_APIKey替换为真实值，如何获取API Key请查看https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Um2wxbaps#步骤二-获取api-key
                 .baseUrl("https://qianfan.baidubce.com/v2/") //千帆ModelBuilder平台地址
                 .build();
 
